@@ -1,67 +1,24 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
 const HomeScreen = () => {
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.greeting}>Welcome back! 👋</Text>
-        <Text style={styles.date}>{today}</Text>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🍽️ Meals</Text>
-          {/* TODO: Render MealCard components here */}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💧 Water Tracker</Text>
-          {/* TODO: Add WaterTracker component here */}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⭐ Favorite Foods</Text>
-          {/* TODO: Add FavoritesPreview component here */}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🔥 Streak: 3 days in a row!</Text>
-          {/* Gamified element preview */}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <Text style={styles.title}>Welcome to the Food Diary App! 🥗</Text>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#fff',
   },
-  scroll: {
-    padding: 20,
-  },
-  greeting: {
-    fontSize: 24,
+  title: {
+    fontSize: 20,
     fontWeight: 'bold',
-  },
-  date: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
   },
 });
 
