@@ -1,50 +1,101 @@
-# Welcome to your Expo app 👋
+# 🥗 Food Diary App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile-first food tracking app built with React Native using Expo.  
+The app helps users log their meals (breakfast, lunch, dinner, snacks), track water intake, and manage a list of favorite foods. Designed for future API integration and app store deployment.
 
-## Get started
+---
 
-1. Install dependencies
+## 📱 Features
 
-   ```bash
-   npm install
-   ```
+- Log meals by category: Breakfast, Lunch, Dinner, Snacks
+- Track daily water intake
+- Save and quickly select favorite foods
+- Clean and modern UI, optimized for mobile
+- Local storage with AsyncStorage (initial version)
+- Scalable architecture ready for Firebase or REST API integration
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🚀 Getting Started
 
-In the output, you'll find options to open the app in a
+### 🔧 Prerequisites
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Node.js (LTS version)  
+  [https://nodejs.org/](https://nodejs.org/)
+- Expo CLI  
+  Install globally with:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+  ```bash
+  npm install -g expo-cli
 
-## Get a fresh project
+### (Optional) Install Expo Go on your iOS/Android phone for mobile preview
 
-When you're ready, run:
+📦 Installation
 
-```bash
-npm run reset-project
-```
+1. Clone or create the project folder:
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+npx create-expo-app food-diary-app
+cd food-diary-app
 
-## Learn more
+2. Start the development server:
 
-To learn more about developing your project with Expo, look at the following resources:
+npx expo start
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+3. Open your device:
 
-## Join the community
+* Scan the QR code with the Expo Go app
+* or press w to run in your browser
 
-Join our community of developers creating universal apps.
+📁 File Structure
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+food-diary-app/
+├── App.js                    # Root component
+├── assets/                  # App images, icons
+│   └── images/
+├── components/              # Reusable UI components
+│   ├── MealCard.js
+│   └── WaterTracker.js
+├── constants/               # Theme colors, constants
+│   └── colors.js
+├── navigation/              # App navigation config
+│   └── AppNavigator.js
+├── screens/                 # Screen views
+│   ├── HomeScreen.js
+│   ├── LogMealScreen.js
+│   ├── WaterScreen.js
+│   ├── FavoritesScreen.js
+│   └── SettingsScreen.js
+├── storage/                 # Local storage functions
+│   └── storage.js
+├── utils/                   # Helper functions
+│   └── helpers.js
+├── .gitignore
+├── package.json
+└── README.md
+
+📌 Roadmap
+
+ Set up React Native + Expo environment
+
+ Design home screen layout
+
+ Implement meal logging with local persistence
+
+ Add water tracking and favorite food list
+
+ Enable Firebase integration for user data sync
+
+ Prepare app for Google Play / App Store submission
+
+🛠️ Tech Stack
+
+React Native (Expo)
+
+React Navigation
+
+AsyncStorage (for data persistence)
+
+Tailwind via NativeWind (optional styling enhancement)
+
+Firebase (planned integration)
+
