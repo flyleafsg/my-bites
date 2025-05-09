@@ -1,80 +1,57 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import MealCard from '../components/MealCard';
+import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
 
-const HomeScreen = () => {
-  const navigation = useNavigation();
-
-  const handleMealPress = (mealType) => {
-    navigation.navigate('LogMeal', { mealType });
-  };
-
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-
+export default function HomeScreen({ navigation }) {
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.greeting}>Welcome back! 👋</Text>
-        <Text style={styles.date}>{today}</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.header}>What did you eat?</Text>
 
-        {/* Meals Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🍽️ Meals</Text>
-          <MealCard title="Breakfast" emoji="🍳" onPress={() => handleMealPress('Breakfast')} />
-          <MealCard title="Lunch" emoji="🥗" onPress={() => handleMealPress('Lunch')} />
-          <MealCard title="Dinner" emoji="🍝" onPress={() => handleMealPress('Dinner')} />
-          <MealCard title="Snacks" emoji="🍪" onPress={() => handleMealPress('Snacks')} />
-        </View>
+      <Button
+        title="Log Meal"
+        onPress={() => navigation.navigate('LogMeal')}
+        color="#4CAF50"
+      />
 
-        {/* Water Tracker Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💧 Water Tracker</Text>
-        </View>
+      <Button
+        title="Track Water Intake"
+        onPress={() => navigation.navigate('WaterIntake')}
+        color="#2196F3"
+      />
 
-        {/* Favorite Foods Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⭐ Favorite Foods</Text>
-        </View>
+      <Text style={styles.subHeader}>View Meal History</Text>
 
-        {/* Gamification Preview */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🔥 Streak: 3 days in a row!</Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <Button
+        title="Meal History"
+        onPress={() => navigation.navigate('MealHistory')}
+        color="#9C27B0"
+      />
+
+      <Button
+        title="Water History"
+        onPress={() => navigation.navigate('WaterHistory')}
+        color="#9C27B0"
+      />
+    </ScrollView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#fff',
+    padding: 16,
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
   },
-  scroll: {
-    padding: 20,
-  },
-  greeting: {
-    fontSize: 24,
+  header: {
+    fontSize: 22,
     fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
   },
-  date: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
+  subHeader: {
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
+    fontWeight: 'bold',
+    marginTop: 32,
+    marginBottom: 12,
+    textAlign: 'center',
   },
 });
-
-export default HomeScreen;
