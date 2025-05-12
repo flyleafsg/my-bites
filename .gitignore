@@ -1,0 +1,75 @@
+# ◼ Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ◼ Environment files
+# Ignore all .env files (including variations like .env.local, .env.production)
+.env
+.env.*.local
+.env.*.development
+.env.*.test
+.env.*.production
+
+# ◼ Expo
+# Expo configuration, caches, and build output
+.expo/
+.expo-shared/
+.expo-cache/
+web-build/
+*.expo.js
+
+# ◼ React Native / Metro
+# Bundler cache
+.expo/metro-cache/
+# Android/ iOS builds (if you ever add native code)
+android/
+ios/
+*.jks
+*.keystore
+
+# ◼ Firebase
+# Firebase CLI state and debug logs
+.firebase/
+firebase-debug.log*
+# Functions directory dependencies & build artifacts
+functions/node_modules/
+functions/lib/
+functions/.runtimeconfig.json
+
+# ◼ Temporary files
+.DS_Store
+*.swp
+*.swo
+*.tmp
+*.temp
+*.log
+
+# ◼ IDE / Editor folders
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# ◼ macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ◼ Windows system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ◼ Logs and debugger snapshots
+logs/
+*.log
+*.stackdump
+npm-debug.log*
+
+# ◼ Build output
+dist/
+build/
+coverage/
