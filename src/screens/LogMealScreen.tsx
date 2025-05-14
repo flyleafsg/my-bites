@@ -1,208 +1,148 @@
 import React, { useState } from 'react';
-import {
-  SafeAreaView,
-  StyleSheet,
-  View,
-  KeyboardAvoidingView,
-  Platform,
-  FlatList,
-  ScrollView,
-} from 'react-native';
-import {
-  TextInput,
-  Button,
-  Text,
-  Snackbar,
-  Divider,
-  HelperText,
-} from 'react-native-paper';
-import { db } from '../services/firebase';
-import {
-  collection,
-  addDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
+import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, TextInput, Button } from 'react-native-paper';
+import { useAppContext } from '../context/AppContext';
 
-const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+interface MealEntry {
+  name: string;
+  type: string;
+}
 
 const LogMealScreen = () => {
+  const { mealLog, addMealItem } = useAppContext();
   const [foodItem, setFoodItem] = useState('');
-  const [mealItems, setMealItems] = useState<string[]>([]);
-  const [mealType, setMealType] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showError, setShowError] = useState(false);
+  const [mealType, setMealType] = useState<'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('Breakfast');
 
-  const addFoodItem = () => {
-    if (foodItem.trim()) {
-      setMealItems((prev) => [...prev, foodItem.trim()]);
+  const handleAddItem = () => {
+    if (foodItem.trim() !== '') {
+      const newEntry: MealEntry = {
+        name: foodItem.trim(),
+        type: mealType,
+      };
+      addMealItem(newEntry);
       setFoodItem('');
     }
   };
 
-  const handleSaveMeal = async () => {
-    if (mealItems.length === 0 || !mealType) {
-      setShowError(true);
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const docRef = await addDoc(collection(db, 'meals'), {
-        items: mealItems,
-        mealType,
-        timestamp: serverTimestamp(),
-      });
-      console.log('✅ Meal saved with ID:', docRef.id);
-      setMealItems([]);
-      setMealType('');
-      setShowSuccess(true);
-    } catch (error) {
-      console.error('❌ Error saving meal:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
-        >
-          <Text style={styles.sectionLabel}>Add Food Items</Text>
-          <View style={styles.row}>
-            <TextInput
-              mode="outlined"
-              label="Enter a food item"
-              value={foodItem}
-              onChangeText={setFoodItem}
-              style={styles.input}
-            />
-            <Button mode="contained" onPress={addFoodItem} style={styles.addButton}>
-              Add
-            </Button>
-          </View>
+    <View style={styles.container}>
+      <Text style={styles.heading}>Add Food Items</Text>
 
-          {mealItems.length > 0 && (
-            <View style={styles.mealList}>
-              <Text style={styles.sectionLabel}>Items in this meal</Text>
-              <FlatList
-                data={mealItems}
-                keyExtractor={(item, index) => `${item}-${index}`}
-                renderItem={({ item }) => (
-                  <Text style={styles.item}>• {item}</Text>
-                )}
-              />
-            </View>
-          )}
-
-          <Divider style={{ marginVertical: 24 }} />
-
-          <Text style={styles.sectionLabel}>Select Meal Type</Text>
-          <View style={styles.buttonGrid}>
-            {mealTypes.map((type) => (
-              <Button
-                key={type}
-                mode={mealType === type ? 'contained' : 'outlined'}
-                onPress={() => setMealType(type)}
-                style={[
-                  styles.mealTypeButton,
-                  mealType === type && styles.selectedMealButton,
-                ]}
-              >
-                {type}
-              </Button>
-            ))}
-          </View>
-
-          <Button
-            mode="contained"
-            onPress={handleSaveMeal}
-            loading={saving}
-            disabled={saving}
-            style={styles.saveButton}
+      <View style={styles.mealTypeRow}>
+        {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((type) => (
+          <TouchableOpacity
+            key={type}
+            style={[
+              styles.mealTypeButton,
+              mealType === type && styles.mealTypeButtonSelected,
+            ]}
+            onPress={() => setMealType(type as any)}
           >
-            Save Meal
-          </Button>
+            <Text
+              style={[
+                styles.mealTypeText,
+                mealType === type && styles.mealTypeTextSelected,
+              ]}
+            >
+              {type}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-          <HelperText type="error" visible={showError}>
-            Please add food items and select a meal type.
-          </HelperText>
-        </KeyboardAvoidingView>
-      </ScrollView>
+      <View style={styles.inputRow}>
+        <TextInput
+          placeholder="Enter a food item"
+          value={foodItem}
+          onChangeText={setFoodItem}
+          mode="flat"
+          style={styles.input}
+          placeholderTextColor="#ccc"
+        />
+        <Button mode="contained" onPress={handleAddItem} style={styles.addButton}>
+          Add
+        </Button>
+      </View>
 
-      <Snackbar
-        visible={showSuccess}
-        onDismiss={() => setShowSuccess(false)}
-        duration={3000}
-      >
-        ✅ Meal saved to Firestore!
-      </Snackbar>
-    </SafeAreaView>
+      <Text style={styles.subheading}>Items in this meal</Text>
+      <FlatList
+        data={mealLog}
+        keyExtractor={(_, index) => index.toString()}
+        renderItem={({ item }: { item: MealEntry }) => (
+          <Text style={styles.itemText}>• {item.name} ({item.type})</Text>
+        )}
+        ListEmptyComponent={<Text style={styles.emptyText}>No items added yet.</Text>}
+      />
+    </View>
   );
 };
-
-export default LogMealScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    padding: 20,
+    backgroundColor: '#f4f4f4',
   },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 16,
-    justifyContent: 'space-between',
+  heading: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#3A2D60',
   },
-  row: {
+  subheading: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
+    color: '#3A2D60',
+  },
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
   },
   input: {
     flex: 1,
-    marginRight: 8,
+    backgroundColor: '#1a1a1a',
+    marginRight: 10,
+    color: '#fff',
   },
   addButton: {
-    height: 56,
-    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: '#d5bfff',
   },
-  sectionLabel: {
+  itemText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    marginBottom: 5,
+    color: '#5A3E85',
   },
-  mealList: {
-    marginBottom: 24,
+  emptyText: {
+    fontStyle: 'italic',
+    color: '#888',
   },
-  item: {
-    fontSize: 14,
-    marginVertical: 2,
-    marginLeft: 8,
-    color: '#444',
-  },
-  buttonGrid: {
+  mealTypeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 15,
   },
   mealTypeButton: {
-    flexBasis: '48%',
-    marginBottom: 12,
-    height: 48,
-    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
   },
-  selectedMealButton: {
-    borderWidth: 2,
-    borderColor: '#9370DB',
+  mealTypeButtonSelected: {
+    backgroundColor: '#d5bfff',
+    borderColor: '#5A3E85',
   },
-  saveButton: {
-    marginTop: 12,
-    borderRadius: 24,
-    paddingVertical: 8,
+  mealTypeText: {
+    color: '#555',
+    fontWeight: 'bold',
+  },
+  mealTypeTextSelected: {
+    color: '#3A2D60',
   },
 });
+
+export default LogMealScreen;
