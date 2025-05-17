@@ -1,96 +1,148 @@
 import React, { useState } from 'react';
-import {
-  SafeAreaView,
-  StyleSheet,
-  View,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { TextInput, Button, Text, Snackbar } from 'react-native-paper';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, TextInput, Button } from 'react-native-paper';
+import { useAppContext } from '../context/AppContext';
+
+interface MealEntry {
+  name: string;
+  type: string;
+}
 
 const LogMealScreen = () => {
-  const [meal, setMeal] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const { mealLog, addMealItem } = useAppContext();
+  const [foodItem, setFoodItem] = useState('');
+  const [mealType, setMealType] = useState<'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('Breakfast');
 
-  const handleSaveMeal = async () => {
-    if (!meal.trim()) return;
-
-    setSaving(true);
-    try {
-      await addDoc(collection(db, 'meals'), {
-        description: meal.trim(),
-        timestamp: serverTimestamp(),
-      });
-      setMeal('');
-      setShowSuccess(true);
-    } catch (error) {
-      console.error('Error saving meal:', error);
-    } finally {
-      setSaving(false);
+  const handleAddItem = () => {
+    if (foodItem.trim() !== '') {
+      const newEntry: MealEntry = {
+        name: foodItem.trim(),
+        type: mealType,
+      };
+      addMealItem(newEntry);
+      setFoodItem('');
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.inner}
-      >
-        <Text style={styles.label}>What did you eat?</Text>
-        <TextInput
-          mode="outlined"
-          label="Meal description"
-          placeholder="e.g. Eggs, Toast, and Juice"
-          value={meal}
-          onChangeText={setMeal}
-          style={styles.input}
-        />
-        <Button
-          mode="contained"
-          onPress={handleSaveMeal}
-          loading={saving}
-          disabled={saving || !meal.trim()}
-          style={styles.button}
-        >
-          Save Meal
-        </Button>
-      </KeyboardAvoidingView>
+    <View style={styles.container}>
+      <Text style={styles.heading}>Add Food Items</Text>
 
-      <Snackbar
-        visible={showSuccess}
-        onDismiss={() => setShowSuccess(false)}
-        duration={3000}
-      >
-        ✅ Meal saved successfully!
-      </Snackbar>
-    </SafeAreaView>
+      <View style={styles.mealTypeRow}>
+        {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((type) => (
+          <TouchableOpacity
+            key={type}
+            style={[
+              styles.mealTypeButton,
+              mealType === type && styles.mealTypeButtonSelected,
+            ]}
+            onPress={() => setMealType(type as any)}
+          >
+            <Text
+              style={[
+                styles.mealTypeText,
+                mealType === type && styles.mealTypeTextSelected,
+              ]}
+            >
+              {type}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.inputRow}>
+        <TextInput
+          placeholder="Enter a food item"
+          value={foodItem}
+          onChangeText={setFoodItem}
+          mode="flat"
+          style={styles.input}
+          placeholderTextColor="#ccc"
+        />
+        <Button mode="contained" onPress={handleAddItem} style={styles.addButton}>
+          Add
+        </Button>
+      </View>
+
+      <Text style={styles.subheading}>Items in this meal</Text>
+      <FlatList
+        data={mealLog}
+        keyExtractor={(_, index) => index.toString()}
+        renderItem={({ item }: { item: MealEntry }) => (
+          <Text style={styles.itemText}>• {item.name} ({item.type})</Text>
+        )}
+        ListEmptyComponent={<Text style={styles.emptyText}>No items added yet.</Text>}
+      />
+    </View>
   );
 };
-
-export default LogMealScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: 20,
+    backgroundColor: '#f4f4f4',
   },
-  inner: {
-    flex: 1,
-    justifyContent: 'center',
+  heading: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#3A2D60',
   },
-  label: {
+  subheading: {
     fontSize: 16,
-    marginBottom: 12,
-    textAlign: 'center',
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
+    color: '#3A2D60',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   input: {
-    marginBottom: 16,
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+    marginRight: 10,
+    color: '#fff',
   },
-  button: {
-    marginTop: 8,
+  addButton: {
+    borderRadius: 12,
+    backgroundColor: '#d5bfff',
+  },
+  itemText: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#5A3E85',
+  },
+  emptyText: {
+    fontStyle: 'italic',
+    color: '#888',
+  },
+  mealTypeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  mealTypeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
+  },
+  mealTypeButtonSelected: {
+    backgroundColor: '#d5bfff',
+    borderColor: '#5A3E85',
+  },
+  mealTypeText: {
+    color: '#555',
+    fontWeight: 'bold',
+  },
+  mealTypeTextSelected: {
+    color: '#3A2D60',
   },
 });
+
+export default LogMealScreen;

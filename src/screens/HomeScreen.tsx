@@ -1,110 +1,72 @@
 import React from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
-import {
-  Card,
-  Title,
-  Button,
-  Text,
-} from 'react-native-paper';
+import { View, StyleSheet } from 'react-native';
+import { Text, Button, Card } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 
-type Navigation = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
-const HomeScreen = () => {
-  const navigation = useNavigation<Navigation>();
+export default function HomeScreen() {
+  const navigation = useNavigation<NavigationProp>();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Card style={styles.card}>
-          <Card.Content>
-            <Title style={styles.title}>Welcome to Meal Diary 👋</Title>
+    <View style={styles.container}>
+      <Text style={styles.heading}>Welcome to MyBites!</Text>
 
-            <Button
-              mode="contained"
-              style={styles.button}
-              onPress={() => navigation.navigate('LogMeal')}
-            >
-              Log a Meal
-            </Button>
+      <Card style={styles.card}>
+        <Card.Content>
+          <Button mode="contained" onPress={() => navigation.navigate('LogMeal')} style={styles.button}>
+            Log Meal
+          </Button>
+          <Button mode="contained" onPress={() => navigation.navigate('LogWater')} style={styles.button}>
+            Log Water
+          </Button>
+          <Button mode="contained" onPress={() => navigation.navigate('MealHistory')} style={styles.button}>
+            View Meal History
+          </Button>
+          <Button mode="contained" onPress={() => navigation.navigate('WaterHistory')} style={styles.button}>
+            View Water History
+          </Button>
+        </Card.Content>
+      </Card>
 
-            <Button
-              mode="contained"
-              style={styles.button}
-              onPress={() => navigation.navigate('LogWater')}
-            >
-              Log Water Intake
-            </Button>
-
-            <Button
-              mode="outlined"
-              style={styles.button}
-              onPress={() => navigation.navigate('MealHistory')}
-            >
-              View Meal History
-            </Button>
-
-            <Button
-              mode="outlined"
-              style={styles.button}
-              onPress={() => navigation.navigate('WaterHistory')}
-            >
-              View Water History
-            </Button>
-
-            <View style={styles.summary}>
-              <Text style={styles.summaryText}>Today’s Summary</Text>
-              <Text style={styles.placeholder}>🧠 Motivation stats coming soon!</Text>
-            </View>
-          </Card.Content>
-        </Card>
-      </ScrollView>
-    </SafeAreaView>
+      <Card style={styles.summaryCard}>
+        <Card.Content>
+          <Text style={styles.summaryText}>Today's Summary coming soon...</Text>
+        </Card.Content>
+      </Card>
+    </View>
   );
-};
-
-export default HomeScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f3f3f3',
+    padding: 20,
+    justifyContent: 'flex-start',
+    backgroundColor: '#fff',
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 16,
-  },
+ heading: {
+  fontSize: 28,
+  fontWeight: '700',
+  color: '#333', // dark grey for contrast
+  marginBottom: 20,
+  textAlign: 'center',
+},
+
   card: {
-    borderRadius: 16,
-    paddingVertical: 24,
-    paddingHorizontal: 8,
-  },
-  title: {
-    fontSize: 20,
-    marginBottom: 16,
-    textAlign: 'center',
+    marginBottom: 20,
   },
   button: {
     marginVertical: 6,
   },
-  summary: {
-    marginTop: 24,
-    alignItems: 'center',
+  summaryCard: {
+    marginTop: 20,
   },
   summaryText: {
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  placeholder: {
-    fontSize: 12,
-    color: 'gray',
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#666',
   },
 });

@@ -16,36 +16,14 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const AppNavigator = () => {
+export default function AppNavigator() {
   return (
     <Stack.Navigator initialRouteName="Home">
-      <Stack.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{ title: 'Meal Diary Dashboard' }}
-      />
-      <Stack.Screen
-        name="LogMeal"
-        component={LogMealScreen}
-        options={{ title: 'Log a Meal' }}
-      />
-      <Stack.Screen
-        name="LogWater"
-        component={LogWaterScreen}
-        options={{ title: 'Log Water Intake' }}
-      />
-      <Stack.Screen
-        name="MealHistory"
-        component={MealHistoryScreen}
-        options={{ title: 'Meal History' }}
-      />
-      <Stack.Screen
-        name="WaterHistory"
-        component={WaterHistoryScreen}
-        options={{ title: 'Water Intake History' }}
-      />
+      <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Meal Diary Dashboard' }} />
+      <Stack.Screen name="LogMeal" component={LogMealScreen} options={{ title: 'Log a Meal' }} />
+      <Stack.Screen name="LogWater" component={LogWaterScreen} options={{ title: 'Log Water Intake' }} />
+      <Stack.Screen name="MealHistory" component={MealHistoryScreen} options={{ title: 'Meal History' }} />
+      <Stack.Screen name="WaterHistory" component={WaterHistoryScreen} options={{ title: 'Water Intake History' }} />
     </Stack.Navigator>
   );
-};
-
-export default AppNavigator;
+}
