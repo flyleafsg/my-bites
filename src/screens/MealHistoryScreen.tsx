@@ -1,13 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, Modal, StyleSheet } from 'react-native';
+import {
+  View,
+  FlatList,
+  Modal,
+  StyleSheet,
+  Alert,
+  Platform,
+} from 'react-native';
 import { Text, TextInput, Button, Card, IconButton } from 'react-native-paper';
 import { db } from '../services/firebase';
-import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  doc,
+  deleteDoc,
+  updateDoc,
+} from 'firebase/firestore';
 
 type MealEntry = {
   id: string;
   name: string;
-  type: string;
+  type?: string;
 };
 
 const MealHistoryScreen = () => {
@@ -17,7 +30,6 @@ const MealHistoryScreen = () => {
   const [editedType, setEditedType] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  // Fetch meals from Firestore
   const fetchMeals = async () => {
     const querySnapshot = await getDocs(collection(db, 'meals'));
     const mealData: MealEntry[] = [];
@@ -31,15 +43,38 @@ const MealHistoryScreen = () => {
     fetchMeals();
   }, []);
 
+  const confirmDelete = (id: string) => {
+    if (Platform.OS === 'web') {
+      // Use window.confirm on web
+      const confirm = window.confirm('Are you sure you want to delete this?');
+      if (confirm) handleDelete(id);
+    } else {
+      // Use Alert on native
+      Alert.alert(
+        'Delete Meal',
+        'Are you sure you want to delete this?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(id) },
+        ],
+        { cancelable: true }
+      );
+    }
+  };
+
   const handleDelete = async (id: string) => {
-    await deleteDoc(doc(db, 'meals', id));
-    fetchMeals();
+    try {
+      await deleteDoc(doc(db, 'meals', id));
+      fetchMeals();
+    } catch (error) {
+      console.error('Error deleting meal:', error);
+    }
   };
 
   const handleEdit = (meal: MealEntry) => {
     setSelectedMeal(meal);
     setEditedName(meal.name);
-    setEditedType(meal.type);
+    setEditedType(meal.type ?? '');
     setIsModalVisible(true);
   };
 
@@ -58,7 +93,7 @@ const MealHistoryScreen = () => {
   const renderMealItem = ({ item }: { item: MealEntry }) => (
     <Card style={styles.card}>
       <Card.Title
-        title={`${item.type}`}
+        title={item.type || 'Unspecified'}
         subtitle={item.name}
         right={() => (
           <View style={styles.iconContainer}>
@@ -69,7 +104,7 @@ const MealHistoryScreen = () => {
             />
             <IconButton
               icon="delete"
-              onPress={() => handleDelete(item.id)}
+              onPress={() => confirmDelete(item.id)}
               accessibilityLabel="Delete Meal"
             />
           </View>
@@ -87,7 +122,6 @@ const MealHistoryScreen = () => {
         contentContainerStyle={styles.list}
       />
 
-      {/* Edit Modal */}
       <Modal visible={isModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
