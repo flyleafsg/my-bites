@@ -1,19 +1,46 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
-import { useAppContext } from '../context/AppContext';
+import { db } from '../services/firebase';
 import { MealEntry } from '../context/AppContext';
 
 const MealHistoryScreen = () => {
-  const { mealLog } = useAppContext();
+  const [meals, setMeals] = useState<MealEntry[]>([]);
+
+  useEffect(() => {
+    const fetchMeals = async () => {
+      try {
+        const snapshot = await db.collection('meals').orderBy('timestamp', 'desc').get();
+        const raw = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          if (data.name && data.type) {
+            return {
+              id: doc.id,
+              name: data.name,
+              type: data.type,
+              timestamp: data.timestamp,
+            };
+          }
+          return null;
+        });
+
+        const fetchedMeals: MealEntry[] = raw.filter((m): m is MealEntry => m !== null);
+        setMeals(fetchedMeals);
+      } catch (error) {
+        console.error('Error fetching meals:', error);
+      }
+    };
+
+    fetchMeals();
+  }, []);
 
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Meal History</Text>
       <FlatList
-        data={mealLog}
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={({ item }: { item: MealEntry }) => (
+        data={meals}
+        keyExtractor={(item, index) => `${item.name}-${item.timestamp ?? index}`}
+        renderItem={({ item }) => (
           <Text style={styles.item}>• {item.name} ({item.type})</Text>
         )}
         ListEmptyComponent={<Text style={styles.emptyText}>No meals logged yet.</Text>}
