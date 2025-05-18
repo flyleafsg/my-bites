@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { auth, db, signInWithGoogle } from '../services/firebase';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { calculateHydrationStreak } from '../utils/calculateStreak';
+import { waterStreakBadges, WaterStreakBadge } from '../constants/waterStreakBadges';
 
 type WaterEntry = {
   timestamp: number | Date;
@@ -14,6 +15,7 @@ const HomeScreen = () => {
   const navigation = useNavigation();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [hydrationStreak, setHydrationStreak] = useState<number>(0);
+  const [earnedBadge, setEarnedBadge] = useState<WaterStreakBadge | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
@@ -23,28 +25,40 @@ const HomeScreen = () => {
         const waterRef = collection(db, 'users', user.uid, 'water');
         const q = query(waterRef);
 
-        const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
-          const entries: WaterEntry[] = snapshot.docs.map((doc) => {
-            const data = doc.data();
-            const rawTimestamp = data.timestamp;
-            return {
-              timestamp: rawTimestamp?.toDate?.() ?? new Date(rawTimestamp),
-            };
-          });
+       const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
+  const entries: WaterEntry[] = snapshot.docs.map((doc) => {
+    const data = doc.data();
+    console.log('🔥 Water log raw data:', data);
+    const rawTimestamp = data.timestamp;
+    return {
+      timestamp: rawTimestamp?.toDate?.() ?? new Date(rawTimestamp),
+    };
+  });
 
-          const streak = calculateHydrationStreak(entries);
-          setHydrationStreak(streak);
-        });
+  console.log('💧 Parsed entries:', entries);
 
-        // ✅ unsubscribe Firestore when component unmounts
+  const streak = calculateHydrationStreak(entries);
+  console.log('💧 Hydration Streak:', streak);
+  setHydrationStreak(streak);
+
+  const badge = [...waterStreakBadges]
+    .reverse()
+    .find((b) => streak >= b.minStreak) ?? null;
+
+  console.log('🏅 Earned Badge:', badge);
+  setEarnedBadge(badge);
+});
+
+
+
         return () => unsubscribeFirestore();
       } else {
         setUserEmail(null);
         setHydrationStreak(0);
+        setEarnedBadge(null);
       }
     });
 
-    // ✅ unsubscribe auth listener on unmount
     return () => unsubscribeAuth();
   }, []);
 
@@ -59,6 +73,22 @@ const HomeScreen = () => {
           <Text style={styles.streakText}>
             Hydration Streak: 🔥 {hydrationStreak} {hydrationStreak === 1 ? 'Day' : 'Days'}
           </Text>
+
+          {/* ✅ Force render test badge for visual check */}
+          <View style={styles.badgeContainer}>
+            <Text style={styles.badgeEmoji}>💧</Text>
+            <Text style={styles.badgeName}>Test Badge</Text>
+            <Text style={styles.badgeDescription}>This is just a test to check rendering.</Text>
+          </View>
+
+          {/* 🧪 Real badge rendering */}
+          {earnedBadge && (
+            <View style={styles.badgeContainer}>
+              <Text style={styles.badgeEmoji}>{earnedBadge.emoji}</Text>
+              <Text style={styles.badgeName}>{earnedBadge.name}</Text>
+              <Text style={styles.badgeDescription}>{earnedBadge.description}</Text>
+            </View>
+          )}
         </>
       ) : (
         <Button
@@ -144,6 +174,25 @@ const styles = StyleSheet.create({
     color: '#007aff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  badgeContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  badgeEmoji: {
+    fontSize: 48,
+  },
+  badgeName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4A148C',
+    marginTop: 4,
+  },
+  badgeDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    paddingHorizontal: 16,
   },
   primaryButton: {
     backgroundColor: '#E1CFFF',
