@@ -1,10 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { db } from '../services/firebase';
+import { User } from 'firebase/auth';
 
 export type MealEntry = {
   name: string;
   type: string;
   timestamp?: number;
+};
+
+type AppContextType = {
+  mealLog: MealEntry[];
+  addMealItem: (item: MealEntry) => void;
+  user: User | null;
+};
+
+export const AppContext = createContext<AppContextType | undefined>(undefined);
+
+type AppProviderProps = {
+  children: ReactNode;
 };
 
 let AsyncStorage: any;
@@ -18,22 +31,11 @@ try {
   };
 }
 
-
-type AppContextType = {
-  mealLog: MealEntry[];
-  addMealItem: (item: MealEntry) => void;
-};
-
-export const AppContext = createContext<AppContextType | undefined>(undefined);
-
-type AppProviderProps = {
-  children: ReactNode;
-};
-
 const STORAGE_KEY = 'mealLog';
 
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [mealLog, setMealLog] = useState<MealEntry[]>([]);
+  const [user, setUser] = useState<User | null>(null); // ✅ Moved inside component
 
   useEffect(() => {
     const loadCachedMeals = async () => {
@@ -63,7 +65,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
     try {
       if (db?.collection) {
-        await db.collection('meals').add(newItem); // Firestore write
+        await db.collection('meals').add(newItem);
       } else {
         console.warn('Firestore not initialized — skipping cloud sync.');
       }
@@ -73,7 +75,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   };
 
   return (
-    <AppContext.Provider value={{ mealLog, addMealItem }}>
+    <AppContext.Provider value={{ mealLog, addMealItem, user }}>
       {children}
     </AppContext.Provider>
   );
