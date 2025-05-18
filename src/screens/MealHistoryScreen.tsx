@@ -1,192 +1,129 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
+  Text,
   FlatList,
-  Modal,
+  TouchableOpacity,
   StyleSheet,
-  Alert,
-  Platform,
 } from 'react-native';
-import { Text, TextInput, Button, Card, IconButton } from 'react-native-paper';
+import { Card, Button } from 'react-native-paper';
+import { AppContext } from '../context/AppContext';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import {
-  collection,
-  getDocs,
-  doc,
-  deleteDoc,
-  updateDoc,
-} from 'firebase/firestore';
+import { format } from 'date-fns';
+import CalendarModal from '../components/CalendarModal';
 
-type MealEntry = {
-  id: string;
-  name: string;
-  type?: string;
-};
+export default function MealHistoryScreen() {
+  const { user } = useContext(AppContext)!;
+  const [mealLog, setMealLog] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isCalendarVisible, setIsCalendarVisible] = useState(false);
 
-const MealHistoryScreen = () => {
-  const [meals, setMeals] = useState<MealEntry[]>([]);
-  const [selectedMeal, setSelectedMeal] = useState<MealEntry | null>(null);
-  const [editedName, setEditedName] = useState('');
-  const [editedType, setEditedType] = useState('');
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const fetchMealsForDate = (date: Date) => {
+    if (!user) return;
 
-  const fetchMeals = async () => {
-    const querySnapshot = await getDocs(collection(db, 'meals'));
-    const mealData: MealEntry[] = [];
-    querySnapshot.forEach((docSnap) => {
-      mealData.push({ id: docSnap.id, ...(docSnap.data() as Omit<MealEntry, 'id'>) });
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const mealsRef = collection(db, 'users', user.uid, 'meals');
+    const q = query(
+      mealsRef,
+      where('timestamp', '>=', Timestamp.fromDate(startOfDay)),
+      where('timestamp', '<=', Timestamp.fromDate(endOfDay))
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const meals = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setMealLog(meals);
     });
-    setMeals(mealData);
+
+    return unsubscribe;
   };
 
   useEffect(() => {
-    fetchMeals();
-  }, []);
+    const unsubscribe = fetchMealsForDate(selectedDate);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [selectedDate]);
 
-  const confirmDelete = (id: string) => {
-    if (Platform.OS === 'web') {
-      // Use window.confirm on web
-      const confirm = window.confirm('Are you sure you want to delete this?');
-      if (confirm) handleDelete(id);
-    } else {
-      // Use Alert on native
-      Alert.alert(
-        'Delete Meal',
-        'Are you sure you want to delete this?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(id) },
-        ],
-        { cancelable: true }
-      );
-    }
+  const renderMeal = ({ item }: any) => {
+    const mealTime = item.timestamp?.toDate?.();
+    return (
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text style={styles.mealText}>{item.type}: {item.name}</Text>
+          {mealTime && (
+            <Text style={styles.timestampText}>
+              {format(mealTime, 'hh:mm a')}
+            </Text>
+          )}
+        </Card.Content>
+      </Card>
+    );
   };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'meals', id));
-      fetchMeals();
-    } catch (error) {
-      console.error('Error deleting meal:', error);
-    }
-  };
-
-  const handleEdit = (meal: MealEntry) => {
-    setSelectedMeal(meal);
-    setEditedName(meal.name);
-    setEditedType(meal.type ?? '');
-    setIsModalVisible(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (selectedMeal) {
-      await updateDoc(doc(db, 'meals', selectedMeal.id), {
-        name: editedName,
-        type: editedType,
-      });
-      setIsModalVisible(false);
-      setSelectedMeal(null);
-      fetchMeals();
-    }
-  };
-
-  const renderMealItem = ({ item }: { item: MealEntry }) => (
-    <Card style={styles.card}>
-      <Card.Title
-        title={item.type || 'Unspecified'}
-        subtitle={item.name}
-        right={() => (
-          <View style={styles.iconContainer}>
-            <IconButton
-              icon="pencil"
-              onPress={() => handleEdit(item)}
-              accessibilityLabel="Edit Meal"
-            />
-            <IconButton
-              icon="delete"
-              onPress={() => confirmDelete(item.id)}
-              accessibilityLabel="Delete Meal"
-            />
-          </View>
-        )}
-      />
-    </Card>
-  );
 
   return (
     <View style={styles.container}>
+      <Text style={styles.heading}>Meal History</Text>
+
+      <TouchableOpacity onPress={() => setIsCalendarVisible(true)}>
+        <Text style={styles.dateText}>
+          {format(selectedDate, 'MMMM dd, yyyy')}
+        </Text>
+      </TouchableOpacity>
+
       <FlatList
-        data={meals}
+        data={mealLog}
         keyExtractor={(item) => item.id}
-        renderItem={renderMealItem}
-        contentContainerStyle={styles.list}
+        renderItem={renderMeal}
+        contentContainerStyle={styles.listContainer}
       />
 
-      <Modal visible={isModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text>Edit Meal</Text>
-            <TextInput
-              label="Meal Name"
-              value={editedName}
-              onChangeText={setEditedName}
-              style={styles.input}
-            />
-            <TextInput
-              label="Meal Type"
-              value={editedType}
-              onChangeText={setEditedType}
-              style={styles.input}
-            />
-            <Button mode="contained" onPress={handleSaveEdit} style={styles.button}>
-              Save
-            </Button>
-            <Button onPress={() => setIsModalVisible(false)} style={styles.button}>
-              Cancel
-            </Button>
-          </View>
-        </View>
-      </Modal>
+      <CalendarModal
+        visible={isCalendarVisible}
+        onClose={() => setIsCalendarVisible(false)}
+        onSelectDate={(date) => setSelectedDate(date)}
+        selectedDate={selectedDate}
+      />
     </View>
   );
-};
-
-export default MealHistoryScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 10,
+    padding: 16,
   },
-  list: {
-    paddingBottom: 20,
+  heading: {
+    fontSize: 24,
+    marginBottom: 8,
+    fontWeight: 'bold',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#007aff',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  listContainer: {
+    paddingBottom: 100,
   },
   card: {
-    marginVertical: 6,
-    borderRadius: 10,
-    elevation: 2,
-  },
-  iconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  modalContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 12,
-    elevation: 5,
-  },
-  input: {
     marginBottom: 10,
+    padding: 10,
   },
-  button: {
-    marginTop: 8,
+  mealText: {
+    fontSize: 16,
+  },
+  timestampText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
   },
 });
