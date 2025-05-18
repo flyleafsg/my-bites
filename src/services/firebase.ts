@@ -1,4 +1,5 @@
 // src/services/firebase.ts
+
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
@@ -17,5 +18,17 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
-export const auth = firebase.auth();         // ✅ this replaces getAuth()
-export const db = firebase.firestore();      // ✅ Firestore too, compat-style
+export const auth = firebase.auth();
+export const db = firebase.firestore();
+
+// ✅ NEW: Google Sign-In
+export const signInWithGoogle = async () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try {
+    const result = await auth.signInWithPopup(provider);
+    console.log('Signed in as:', result.user?.email);
+    return result.user;
+  } catch (error) {
+    console.error('Google Sign-In error:', error);
+  }
+};
