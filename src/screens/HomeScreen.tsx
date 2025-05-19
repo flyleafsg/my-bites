@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Button, Title } from 'react-native-paper';
+import { Text, Button, Title, Portal, Modal } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db, signInWithGoogle } from '../services/firebase';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { calculateHydrationStreak } from '../utils/calculateStreak';
@@ -11,11 +12,14 @@ type WaterEntry = {
   timestamp: number | Date;
 };
 
+const STORAGE_KEY = 'lastEarnedWaterBadgeId';
+
 const HomeScreen = () => {
   const navigation = useNavigation();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [hydrationStreak, setHydrationStreak] = useState<number>(0);
   const [earnedBadge, setEarnedBadge] = useState<WaterStreakBadge | null>(null);
+  const [showBadgeModal, setShowBadgeModal] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
@@ -25,31 +29,33 @@ const HomeScreen = () => {
         const waterRef = collection(db, 'users', user.uid, 'water');
         const q = query(waterRef);
 
-       const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
-  const entries: WaterEntry[] = snapshot.docs.map((doc) => {
-    const data = doc.data();
-    console.log('🔥 Water log raw data:', data);
-    const rawTimestamp = data.timestamp;
-    return {
-      timestamp: rawTimestamp?.toDate?.() ?? new Date(rawTimestamp),
-    };
-  });
+        const unsubscribeFirestore = onSnapshot(q, async (snapshot) => {
+          const entries: WaterEntry[] = snapshot.docs.map((doc) => {
+            const data = doc.data();
+            const rawTimestamp = data.timestamp;
+            return {
+              timestamp: rawTimestamp?.toDate?.() ?? new Date(rawTimestamp),
+            };
+          });
 
-  console.log('💧 Parsed entries:', entries);
+          const streak = calculateHydrationStreak(entries);
+          setHydrationStreak(streak);
 
-  const streak = calculateHydrationStreak(entries);
-  console.log('💧 Hydration Streak:', streak);
-  setHydrationStreak(streak);
+          const badge = [...waterStreakBadges]
+            .reverse()
+            .find((b) => streak >= b.minStreak) ?? null;
 
-  const badge = [...waterStreakBadges]
-    .reverse()
-    .find((b) => streak >= b.minStreak) ?? null;
+          setEarnedBadge(badge);
 
-  console.log('🏅 Earned Badge:', badge);
-  setEarnedBadge(badge);
-});
+          if (badge) {
+            const lastBadgeId = await AsyncStorage.getItem(STORAGE_KEY);
 
-
+            if (lastBadgeId !== badge.id) {
+              setShowBadgeModal(true);
+              await AsyncStorage.setItem(STORAGE_KEY, badge.id);
+            }
+          }
+        });
 
         return () => unsubscribeFirestore();
       } else {
@@ -74,14 +80,6 @@ const HomeScreen = () => {
             Hydration Streak: 🔥 {hydrationStreak} {hydrationStreak === 1 ? 'Day' : 'Days'}
           </Text>
 
-          {/* ✅ Force render test badge for visual check */}
-          <View style={styles.badgeContainer}>
-            <Text style={styles.badgeEmoji}>💧</Text>
-            <Text style={styles.badgeName}>Test Badge</Text>
-            <Text style={styles.badgeDescription}>This is just a test to check rendering.</Text>
-          </View>
-
-          {/* 🧪 Real badge rendering */}
           {earnedBadge && (
             <View style={styles.badgeContainer}>
               <Text style={styles.badgeEmoji}>{earnedBadge.emoji}</Text>
@@ -136,6 +134,19 @@ const HomeScreen = () => {
       >
         View Water History
       </Button>
+
+      {/* 🎉 Badge Unlock Animation Modal */}
+      <Portal>
+        <Modal visible={showBadgeModal} onDismiss={() => setShowBadgeModal(false)} contentContainerStyle={styles.modalContainer}>
+          {earnedBadge && (
+            <>
+              <Text style={styles.modalEmoji}>{earnedBadge.emoji}</Text>
+              <Text style={styles.modalTitle}>Unlocked: {earnedBadge.name}</Text>
+              <Text style={styles.modalDescription}>{earnedBadge.description}</Text>
+            </>
+          )}
+        </Modal>
+      </Portal>
     </View>
   );
 };
@@ -212,5 +223,27 @@ const styles = StyleSheet.create({
   },
   outlinedLabel: {
     color: '#4A148C',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginHorizontal: 24,
+  },
+  modalEmoji: {
+    fontSize: 64,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4A148C',
+    marginTop: 8,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
