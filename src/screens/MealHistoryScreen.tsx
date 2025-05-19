@@ -1,129 +1,120 @@
-import React, { useState, useEffect, useContext } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import { Card, Button } from 'react-native-paper';
-import { AppContext } from '../context/AppContext';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { View, FlatList, Modal, StyleSheet } from 'react-native';
+import { Text, TextInput, Button, Card, IconButton } from 'react-native-paper';
 import { db } from '../services/firebase';
-import { format } from 'date-fns';
-import CalendarModal from '../components/CalendarModal';
 
-export default function MealHistoryScreen() {
-  const { user } = useContext(AppContext)!;
-  const [mealLog, setMealLog] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [isCalendarVisible, setIsCalendarVisible] = useState(false);
+type MealEntry = {
+  id: string;
+  name: string;
+  type: string;
+};
 
-  const fetchMealsForDate = (date: Date) => {
-    if (!user) return;
+const MealHistoryScreen = () => {
+  const [meals, setMeals] = useState<MealEntry[]>([]);
+  const [selectedMeal, setSelectedMeal] = useState<MealEntry | null>(null);
+  const [editedName, setEditedName] = useState('');
+  const [editedType, setEditedType] = useState('');
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const mealsRef = collection(db, 'users', user.uid, 'meals');
-    const q = query(
-      mealsRef,
-      where('timestamp', '>=', Timestamp.fromDate(startOfDay)),
-      where('timestamp', '<=', Timestamp.fromDate(endOfDay))
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const meals = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setMealLog(meals);
+  const fetchMeals = async () => {
+    const snapshot = await db.collection('meals').get();
+    const mealData: MealEntry[] = [];
+    snapshot.forEach((docSnap) => {
+      mealData.push({ id: docSnap.id, ...(docSnap.data() as MealEntry) });
     });
+    setMeals(mealData);
+  };
 
-    return unsubscribe;
+  const handleDelete = async (id: string) => {
+    await db.collection('meals').doc(id).delete();
+    fetchMeals();
+  };
+
+  const handleEdit = (meal: MealEntry) => {
+    setSelectedMeal(meal);
+    setEditedName(meal.name);
+    setEditedType(meal.type);
+    setIsModalVisible(true);
+  };
+
+  const saveEdit = async () => {
+    if (selectedMeal) {
+      await db.collection('meals').doc(selectedMeal.id).update({
+        name: editedName,
+        type: editedType,
+      });
+      setIsModalVisible(false);
+      fetchMeals();
+    }
   };
 
   useEffect(() => {
-    const unsubscribe = fetchMealsForDate(selectedDate);
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [selectedDate]);
-
-  const renderMeal = ({ item }: any) => {
-    const mealTime = item.timestamp?.toDate?.();
-    return (
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text style={styles.mealText}>{item.type}: {item.name}</Text>
-          {mealTime && (
-            <Text style={styles.timestampText}>
-              {format(mealTime, 'hh:mm a')}
-            </Text>
-          )}
-        </Card.Content>
-      </Card>
-    );
-  };
+    fetchMeals();
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Meal History</Text>
-
-      <TouchableOpacity onPress={() => setIsCalendarVisible(true)}>
-        <Text style={styles.dateText}>
-          {format(selectedDate, 'MMMM dd, yyyy')}
-        </Text>
-      </TouchableOpacity>
-
       <FlatList
-        data={mealLog}
+        data={meals}
         keyExtractor={(item) => item.id}
-        renderItem={renderMeal}
-        contentContainerStyle={styles.listContainer}
+        renderItem={({ item }) => (
+          <Card style={styles.card}>
+            <Card.Title title={item.name} subtitle={item.type} />
+            <Card.Actions>
+              <IconButton icon="pencil" onPress={() => handleEdit(item)} />
+              <IconButton icon="delete" onPress={() => handleDelete(item.id)} />
+            </Card.Actions>
+          </Card>
+        )}
       />
 
-      <CalendarModal
-        visible={isCalendarVisible}
-        onClose={() => setIsCalendarVisible(false)}
-        onSelectDate={(date) => setSelectedDate(date)}
-        selectedDate={selectedDate}
-      />
+      <Modal visible={isModalVisible} transparent animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text>Edit Meal</Text>
+            <TextInput
+              label="Name"
+              value={editedName}
+              onChangeText={setEditedName}
+              style={styles.input}
+            />
+            <TextInput
+              label="Type"
+              value={editedType}
+              onChangeText={setEditedType}
+              style={styles.input}
+            />
+            <Button onPress={saveEdit}>Save</Button>
+            <Button onPress={() => setIsModalVisible(false)}>Cancel</Button>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-  },
-  heading: {
-    fontSize: 24,
-    marginBottom: 8,
-    fontWeight: 'bold',
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#007aff',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  listContainer: {
-    paddingBottom: 100,
-  },
-  card: {
-    marginBottom: 10,
     padding: 10,
   },
-  mealText: {
-    fontSize: 16,
+  card: {
+    marginVertical: 5,
   },
-  timestampText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    margin: 20,
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+  },
+  input: {
+    marginBottom: 10,
   },
 });
+
+export default MealHistoryScreen;
