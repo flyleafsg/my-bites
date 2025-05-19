@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { View, FlatList, Modal, StyleSheet } from 'react-native';
 import { Text, TextInput, Button, Card, IconButton } from 'react-native-paper';
 import { db } from '../services/firebase';
-import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 type MealEntry = {
   id: string;
@@ -17,22 +16,17 @@ const MealHistoryScreen = () => {
   const [editedType, setEditedType] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  // Fetch meals from Firestore
   const fetchMeals = async () => {
-    const querySnapshot = await getDocs(collection(db, 'meals'));
+    const snapshot = await db.collection('meals').get();
     const mealData: MealEntry[] = [];
-    querySnapshot.forEach((docSnap) => {
-      mealData.push({ id: docSnap.id, ...(docSnap.data() as Omit<MealEntry, 'id'>) });
+    snapshot.forEach((docSnap) => {
+      mealData.push({ id: docSnap.id, ...(docSnap.data() as MealEntry) });
     });
     setMeals(mealData);
   };
 
-  useEffect(() => {
-    fetchMeals();
-  }, []);
-
   const handleDelete = async (id: string) => {
-    await deleteDoc(doc(db, 'meals', id));
+    await db.collection('meals').doc(id).delete();
     fetchMeals();
   };
 
@@ -43,73 +37,55 @@ const MealHistoryScreen = () => {
     setIsModalVisible(true);
   };
 
-  const handleSaveEdit = async () => {
+  const saveEdit = async () => {
     if (selectedMeal) {
-      await updateDoc(doc(db, 'meals', selectedMeal.id), {
+      await db.collection('meals').doc(selectedMeal.id).update({
         name: editedName,
         type: editedType,
       });
       setIsModalVisible(false);
-      setSelectedMeal(null);
       fetchMeals();
     }
   };
 
-  const renderMealItem = ({ item }: { item: MealEntry }) => (
-    <Card style={styles.card}>
-      <Card.Title
-        title={`${item.type}`}
-        subtitle={item.name}
-        right={() => (
-          <View style={styles.iconContainer}>
-            <IconButton
-              icon="pencil"
-              onPress={() => handleEdit(item)}
-              accessibilityLabel="Edit Meal"
-            />
-            <IconButton
-              icon="delete"
-              onPress={() => handleDelete(item.id)}
-              accessibilityLabel="Delete Meal"
-            />
-          </View>
-        )}
-      />
-    </Card>
-  );
+  useEffect(() => {
+    fetchMeals();
+  }, []);
 
   return (
     <View style={styles.container}>
       <FlatList
         data={meals}
         keyExtractor={(item) => item.id}
-        renderItem={renderMealItem}
-        contentContainerStyle={styles.list}
+        renderItem={({ item }) => (
+          <Card style={styles.card}>
+            <Card.Title title={item.name} subtitle={item.type} />
+            <Card.Actions>
+              <IconButton icon="pencil" onPress={() => handleEdit(item)} />
+              <IconButton icon="delete" onPress={() => handleDelete(item.id)} />
+            </Card.Actions>
+          </Card>
+        )}
       />
 
-      {/* Edit Modal */}
-      <Modal visible={isModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+      <Modal visible={isModalVisible} transparent animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
             <Text>Edit Meal</Text>
             <TextInput
-              label="Meal Name"
+              label="Name"
               value={editedName}
               onChangeText={setEditedName}
               style={styles.input}
             />
             <TextInput
-              label="Meal Type"
+              label="Type"
               value={editedType}
               onChangeText={setEditedType}
               style={styles.input}
             />
-            <Button mode="contained" onPress={handleSaveEdit} style={styles.button}>
-              Save
-            </Button>
-            <Button onPress={() => setIsModalVisible(false)} style={styles.button}>
-              Cancel
-            </Button>
+            <Button onPress={saveEdit}>Save</Button>
+            <Button onPress={() => setIsModalVisible(false)}>Cancel</Button>
           </View>
         </View>
       </Modal>
@@ -117,42 +93,28 @@ const MealHistoryScreen = () => {
   );
 };
 
-export default MealHistoryScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     padding: 10,
   },
-  list: {
-    paddingBottom: 20,
-  },
   card: {
-    marginVertical: 6,
-    borderRadius: 10,
-    elevation: 2,
-  },
-  iconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
+    marginVertical: 5,
   },
   modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    margin: 20,
     backgroundColor: 'white',
     padding: 20,
-    borderRadius: 12,
-    elevation: 5,
+    borderRadius: 10,
   },
   input: {
     marginBottom: 10,
   },
-  button: {
-    marginTop: 8,
-  },
 });
+
+export default MealHistoryScreen;

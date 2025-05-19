@@ -1,10 +1,34 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { db } from '../services/firebase';
+import { User, onAuthStateChanged, getAuth } from 'firebase/auth';
+import {
+  collection,
+  addDoc,
+  Timestamp
+} from 'firebase/firestore';
 
 export type MealEntry = {
   name: string;
   type: string;
   timestamp?: number;
+};
+
+export type WaterEntry = {
+  amount: number;
+  timestamp: Date;
+};
+
+type AppContextType = {
+  mealLog: MealEntry[];
+  addMealItem: (item: MealEntry) => void;
+  addWaterEntry: (amount: number) => Promise<void>;
+  user: User | null;
+};
+
+export const AppContext = createContext<AppContextType | undefined>(undefined);
+
+type AppProviderProps = {
+  children: ReactNode;
 };
 
 let AsyncStorage: any;
@@ -18,22 +42,19 @@ try {
   };
 }
 
-
-type AppContextType = {
-  mealLog: MealEntry[];
-  addMealItem: (item: MealEntry) => void;
-};
-
-export const AppContext = createContext<AppContextType | undefined>(undefined);
-
-type AppProviderProps = {
-  children: ReactNode;
-};
-
 const STORAGE_KEY = 'mealLog';
 
 export const AppProvider = ({ children }: AppProviderProps) => {
   const [mealLog, setMealLog] = useState<MealEntry[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(getAuth(), (firebaseUser) => {
+      setUser(firebaseUser);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const loadCachedMeals = async () => {
@@ -63,7 +84,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
     try {
       if (db?.collection) {
-        await db.collection('meals').add(newItem); // Firestore write
+        await db.collection('meals').add(newItem);
       } else {
         console.warn('Firestore not initialized — skipping cloud sync.');
       }
@@ -72,8 +93,26 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     }
   };
 
+  const addWaterEntry = async (amount: number) => {
+    if (!user) {
+      console.warn('User not authenticated — cannot log water.');
+      return;
+    }
+
+    try {
+      const ref = collection(db, 'users', user.uid, 'water');
+      await addDoc(ref, {
+        amount,
+        timestamp: Timestamp.now(),
+      });
+      console.log('✅ Water entry saved:', { amount });
+    } catch (error) {
+      console.error('❌ Failed to log water:', error);
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ mealLog, addMealItem }}>
+    <AppContext.Provider value={{ mealLog, addMealItem, addWaterEntry, user }}>
       {children}
     </AppContext.Provider>
   );
