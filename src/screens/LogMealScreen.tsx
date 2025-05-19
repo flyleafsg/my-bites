@@ -1,148 +1,200 @@
-import React, { useState } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { Text, TextInput, Button } from 'react-native-paper';
-import { useAppContext } from '../context/AppContext';
+import React, { useState, useContext, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+} from 'react-native';
+import { TextInput, Button, Card } from 'react-native-paper';
+import { AppContext } from '../context/AppContext';
+import { Timestamp, collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase';
+import { format } from 'date-fns';
+import CalendarModal from '../components/CalendarModal'; // ✅ Import calendar
 
-interface MealEntry {
-  name: string;
-  type: string;
-}
+export default function LogMealScreen() {
+  const { user } = useContext(AppContext)!;
+  const [mealName, setMealName] = useState('');
+  const [mealType, setMealType] = useState('Breakfast');
+  const [mealLog, setMealLog] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isCalendarVisible, setIsCalendarVisible] = useState(false);
 
-const LogMealScreen = () => {
-  const { mealLog, addMealItem } = useAppContext();
-  const [foodItem, setFoodItem] = useState('');
-  const [mealType, setMealType] = useState<'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('Breakfast');
+  const fetchMealsForDate = (date: Date) => {
+    if (!user) return;
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
 
-  const handleAddItem = () => {
-    if (foodItem.trim() !== '') {
-      const newEntry: MealEntry = {
-        name: foodItem.trim(),
-        type: mealType,
-      };
-      addMealItem(newEntry);
-      setFoodItem('');
+    const mealsRef = collection(db, 'users', user.uid, 'meals');
+    const q = query(
+      mealsRef,
+      where('timestamp', '>=', Timestamp.fromDate(startOfDay)),
+      where('timestamp', '<=', Timestamp.fromDate(endOfDay))
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const meals = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setMealLog(meals);
+    });
+
+    return unsubscribe;
+  };
+
+  useEffect(() => {
+    const unsubscribe = fetchMealsForDate(selectedDate);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [selectedDate]);
+
+  const handleSaveMeal = async () => {
+    if (!user || !mealName.trim()) return;
+
+    const newMeal = {
+      name: mealName.trim(),
+      type: mealType,
+      timestamp: Timestamp.fromDate(selectedDate),
+    };
+
+    try {
+      const mealsRef = collection(db, 'users', user.uid, 'meals');
+      await addDoc(mealsRef, newMeal);
+      setMealName('');
+    } catch (error) {
+      console.error('Error saving meal:', error);
     }
+  };
+
+  const renderMeal = ({ item }: any) => {
+    const mealTime = item.timestamp?.toDate?.();
+    return (
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text style={styles.mealText}>
+            {item.type}: {item.name}
+          </Text>
+          {mealTime && (
+            <Text style={styles.timestampText}>
+              {format(mealTime, 'hh:mm a')}
+            </Text>
+          )}
+        </Card.Content>
+      </Card>
+    );
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Add Food Items</Text>
+      <Text style={styles.heading}>Log Your Meal</Text>
 
-      <View style={styles.mealTypeRow}>
-        {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((type) => (
-          <TouchableOpacity
+      <TouchableOpacity onPress={() => setIsCalendarVisible(true)}>
+        <Text style={styles.dateText}>
+          {format(selectedDate, 'MMMM dd, yyyy')}
+        </Text>
+      </TouchableOpacity>
+
+      <TextInput
+        label="Meal Description"
+        value={mealName}
+        onChangeText={setMealName}
+        style={styles.input}
+        mode="outlined"
+      />
+
+      <View style={styles.buttonRow}>
+        {['Breakfast', 'Lunch', 'Dinner', 'Snacks'].map((type) => (
+          <Button
             key={type}
-            style={[
-              styles.mealTypeButton,
-              mealType === type && styles.mealTypeButtonSelected,
-            ]}
-            onPress={() => setMealType(type as any)}
+            mode={mealType === type ? 'contained' : 'outlined'}
+            onPress={() => setMealType(type)}
+            style={styles.mealTypeButton}
           >
-            <Text
-              style={[
-                styles.mealTypeText,
-                mealType === type && styles.mealTypeTextSelected,
-              ]}
-            >
-              {type}
-            </Text>
-          </TouchableOpacity>
+            {type}
+          </Button>
         ))}
       </View>
 
-      <View style={styles.inputRow}>
-        <TextInput
-          placeholder="Enter a food item"
-          value={foodItem}
-          onChangeText={setFoodItem}
-          mode="flat"
-          style={styles.input}
-          placeholderTextColor="#ccc"
-        />
-        <Button mode="contained" onPress={handleAddItem} style={styles.addButton}>
-          Add
-        </Button>
-      </View>
+      <Button mode="contained" onPress={handleSaveMeal} style={styles.saveButton}>
+        Save Meal
+      </Button>
 
-      <Text style={styles.subheading}>Items in this meal</Text>
+      <Text style={styles.subheading}>Meals for {format(selectedDate, 'MMM dd')}</Text>
+
       <FlatList
         data={mealLog}
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={({ item }: { item: MealEntry }) => (
-          <Text style={styles.itemText}>• {item.name} ({item.type})</Text>
-        )}
-        ListEmptyComponent={<Text style={styles.emptyText}>No items added yet.</Text>}
+        keyExtractor={(item) => item.id}
+        renderItem={renderMeal}
+        contentContainerStyle={styles.mealList}
+      />
+
+      {/* ✅ Integrated CalendarModal */}
+      <CalendarModal
+        visible={isCalendarVisible}
+        onClose={() => setIsCalendarVisible(false)}
+        onSelectDate={(date) => setSelectedDate(date)}
+        selectedDate={selectedDate}
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f4f4f4',
+    padding: 16,
   },
   heading: {
-    fontSize: 18,
+    fontSize: 24,
+    marginBottom: 8,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#3A2D60',
   },
   subheading: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
     marginTop: 20,
-    marginBottom: 10,
-    color: '#3A2D60',
+    marginBottom: 8,
   },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  dateText: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#007aff',
+    textAlign: 'center',
   },
   input: {
-    flex: 1,
-    backgroundColor: '#1a1a1a',
-    marginRight: 10,
-    color: '#fff',
+    marginBottom: 8,
+    fontSize: 14,
   },
-  addButton: {
-    borderRadius: 12,
-    backgroundColor: '#d5bfff',
-  },
-  itemText: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#5A3E85',
-  },
-  emptyText: {
-    fontStyle: 'italic',
-    color: '#888',
-  },
-  mealTypeRow: {
+  buttonRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
     justifyContent: 'space-between',
-    marginBottom: 15,
   },
   mealTypeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#fff',
+    margin: 4,
+    flexGrow: 1,
   },
-  mealTypeButtonSelected: {
-    backgroundColor: '#d5bfff',
-    borderColor: '#5A3E85',
+  saveButton: {
+    marginBottom: 12,
   },
-  mealTypeText: {
-    color: '#555',
-    fontWeight: 'bold',
+  mealList: {
+    paddingBottom: 100,
   },
-  mealTypeTextSelected: {
-    color: '#3A2D60',
+  card: {
+    marginVertical: 6,
+    padding: 8,
+  },
+  mealText: {
+    fontSize: 16,
+  },
+  timestampText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
   },
 });
-
-export default LogMealScreen;

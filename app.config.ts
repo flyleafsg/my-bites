@@ -2,8 +2,9 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: 'ClassCountdown',
-    slug: 'classcountdown',
+    name: 'Meal-Diary',
+    slug: 'Meal-Diary',
+    plugins: ['expo-web-browser'], // ✅ <-- add this line
     extra: {
       EXPO_PUBLIC_FIREBASE_API_KEY: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
       EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
