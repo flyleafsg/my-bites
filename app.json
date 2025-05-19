@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "classcountdown",
-    "slug": "classcountdown",
+    "name": "Meal-Diary",
+    "slug": "Meal-Diary",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

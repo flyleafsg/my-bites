@@ -17,10 +17,10 @@ import {
   Title,
   ProgressBar,
 } from 'react-native-paper';
+import { useAppContext } from '../context/AppContext'; // ✅ NEW
 import { db } from '../services/firebase';
 import {
   collection,
-  addDoc,
   getDocs,
   deleteDoc,
   updateDoc,
@@ -32,13 +32,14 @@ import {
 
 type WaterEntry = {
   id: string;
-  ounces: number;
+  amount: number;
   timestamp: Timestamp;
 };
 
 const DAILY_GOAL = 64;
 
 const LogWaterScreen = () => {
+  const { user, addWaterEntry } = useAppContext(); // ✅ NEW
   const [waterEntries, setWaterEntries] = useState<WaterEntry[]>([]);
   const [currentAmount, setCurrentAmount] = useState(0);
   const [totalIntake, setTotalIntake] = useState(0);
@@ -48,14 +49,19 @@ const LogWaterScreen = () => {
   const [progressAnim] = useState(new Animated.Value(0));
 
   const fetchWaterEntries = async () => {
-    const q = query(collection(db, 'water'), orderBy('timestamp', 'desc'));
+    if (!user) return;
+    const q = query(collection(db, 'users', user.uid, 'water'), orderBy('timestamp', 'desc'));
     const querySnapshot = await getDocs(q);
     const data: WaterEntry[] = [];
     let total = 0;
     querySnapshot.forEach((docSnap) => {
-      const entry = docSnap.data() as Omit<WaterEntry, 'id'>;
-      data.push({ id: docSnap.id, ...entry });
-      total += entry.ounces;
+      const entry = docSnap.data();
+      data.push({
+        id: docSnap.id,
+        amount: entry.amount,
+        timestamp: entry.timestamp,
+      });
+      total += entry.amount;
     });
     setWaterEntries(data);
     setTotalIntake(total);
@@ -73,16 +79,11 @@ const LogWaterScreen = () => {
 
   useEffect(() => {
     fetchWaterEntries();
-  }, []);
+  }, [user]);
 
   const handleAddWater = async () => {
-    if (currentAmount <= 0) return;
-
-    await addDoc(collection(db, 'water'), {
-      ounces: currentAmount,
-      timestamp: Timestamp.now(),
-    });
-
+    if (currentAmount <= 0 || !user) return;
+    await addWaterEntry(currentAmount); // ✅ USE CONTEXT FUNCTION
     setCurrentAmount(0);
     fetchWaterEntries();
   };
@@ -105,20 +106,21 @@ const LogWaterScreen = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteDoc(doc(db, 'water', id));
+    if (!user) return;
+    await deleteDoc(doc(db, 'users', user.uid, 'water', id)); // ✅ FIXED PATH
     fetchWaterEntries();
   };
 
   const handleEdit = (entry: WaterEntry) => {
     setSelectedEntry(entry);
-    setEditedAmount(entry.ounces);
+    setEditedAmount(entry.amount);
     setIsModalVisible(true);
   };
 
   const handleSaveEdit = async () => {
-    if (selectedEntry && editedAmount > 0) {
-      await updateDoc(doc(db, 'water', selectedEntry.id), {
-        ounces: editedAmount,
+    if (selectedEntry && editedAmount > 0 && user) {
+      await updateDoc(doc(db, 'users', user.uid, 'water', selectedEntry.id), {
+        amount: editedAmount,
       });
       setIsModalVisible(false);
       setSelectedEntry(null);
@@ -129,20 +131,12 @@ const LogWaterScreen = () => {
   const renderEntry = ({ item }: { item: WaterEntry }) => (
     <Card style={styles.card}>
       <Card.Title
-        title={`${item.ounces} oz`}
+        title={`${item.amount} oz`}
         subtitle={`Logged: ${item.timestamp.toDate().toLocaleString()}`}
         right={() => (
           <View style={styles.iconContainer}>
-            <IconButton
-              icon="pencil"
-              onPress={() => handleEdit(item)}
-              accessibilityLabel="Edit Entry"
-            />
-            <IconButton
-              icon="delete"
-              onPress={() => confirmDelete(item.id)}
-              accessibilityLabel="Delete Entry"
-            />
+            <IconButton icon="pencil" onPress={() => handleEdit(item)} />
+            <IconButton icon="delete" onPress={() => confirmDelete(item.id)} />
           </View>
         )}
       />
@@ -154,17 +148,17 @@ const LogWaterScreen = () => {
       <Title style={styles.totalText}>Total Water Today: {totalIntake} oz</Title>
 
       {/* Glowing Hydration Bar */}
-    <View style={styles.progressContainer}>
-      <View style={styles.progressWrapper}>
-       <Animated.View style={[styles.glow, { opacity: progressAnim }]} />
-       <ProgressBar
-         progress={progressAnim as unknown as number}
-         color="#03A9F4"
-         style={styles.progressBar}
-    />
-  </View>
-  <Text style={styles.goalText}>Goal: {DAILY_GOAL} oz</Text>
-</View>
+      <View style={styles.progressContainer}>
+        <View style={styles.progressWrapper}>
+          <Animated.View style={[styles.glow, { opacity: progressAnim }]} />
+          <ProgressBar
+            progress={progressAnim as unknown as number}
+            color="#03A9F4"
+            style={styles.progressBar}
+          />
+        </View>
+        <Text style={styles.goalText}>Goal: {DAILY_GOAL} oz</Text>
+      </View>
 
       <View style={styles.adjustContainer}>
         <Button
@@ -172,7 +166,6 @@ const LogWaterScreen = () => {
           onPress={() => setCurrentAmount((prev) => prev + 8)}
           style={styles.pillButton}
           buttonColor="#4FC3F7"
-          textColor="white"
         >
           +
         </Button>
@@ -182,7 +175,6 @@ const LogWaterScreen = () => {
           onPress={() => setCurrentAmount((prev) => Math.max(prev - 1, 0))}
           style={styles.pillButton}
           buttonColor="#4FC3F7"
-          textColor="white"
         >
           –
         </Button>
@@ -194,7 +186,6 @@ const LogWaterScreen = () => {
         style={styles.saveButton}
         disabled={currentAmount <= 0}
         buttonColor="#0288D1"
-        textColor="white"
       >
         Save Entry
       </Button>
@@ -206,7 +197,7 @@ const LogWaterScreen = () => {
         contentContainerStyle={styles.list}
       />
 
-      {/* Edit Modal with + / - Controls */}
+      {/* Edit Modal */}
       <Modal visible={isModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -217,7 +208,6 @@ const LogWaterScreen = () => {
                 onPress={() => setEditedAmount((prev) => Math.max(prev - 1, 0))}
                 style={styles.smallPillButton}
                 buttonColor="#4FC3F7"
-                textColor="white"
               >
                 –
               </Button>
@@ -227,7 +217,6 @@ const LogWaterScreen = () => {
                 onPress={() => setEditedAmount((prev) => prev + 8)}
                 style={styles.smallPillButton}
                 buttonColor="#4FC3F7"
-                textColor="white"
               >
                 +
               </Button>
@@ -261,39 +250,36 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   progressContainer: {
-  marginTop: 8,
-  marginBottom: 12,
-  alignItems: 'center',
-},
-
-progressWrapper: {
-  width: '90%',
-  height: 14,
-  borderRadius: 10,
-  overflow: 'hidden', // clips the glow to match bar radius
-  position: 'relative',
-  backgroundColor: '#E0F7FA',
-},
-
-progressBar: {
-  height: 14,
-  backgroundColor: 'transparent',
-},
-
-glow: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  height: 14,
-  borderRadius: 10,
-  backgroundColor: '#81D4FA',
-  shadowColor: '#81D4FA',
-  shadowOffset: { width: 0, height: 0 },
-  shadowOpacity: 0.9,
-  shadowRadius: 6,
-  zIndex: -1,
-},
+    marginTop: 8,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  progressWrapper: {
+    width: '90%',
+    height: 14,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#E0F7FA',
+  },
+  progressBar: {
+    height: 14,
+    backgroundColor: 'transparent',
+  },
+  glow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 14,
+    borderRadius: 10,
+    backgroundColor: '#81D4FA',
+    shadowColor: '#81D4FA',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    zIndex: -1,
+  },
   goalText: {
     marginTop: 4,
     fontSize: 12,
@@ -371,3 +357,4 @@ glow: {
     marginTop: 8,
   },
 });
+
