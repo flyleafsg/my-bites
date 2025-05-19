@@ -10,14 +10,13 @@ import {
 } from 'react-native';
 import {
   Text,
-  TextInput,
   Button,
   Card,
   IconButton,
   Title,
   ProgressBar,
 } from 'react-native-paper';
-import { useAppContext } from '../context/AppContext'; // ✅ NEW
+import { useAppContext } from '../context/AppContext';
 import { db } from '../services/firebase';
 import {
   collection,
@@ -39,7 +38,7 @@ type WaterEntry = {
 const DAILY_GOAL = 64;
 
 const LogWaterScreen = () => {
-  const { user, addWaterEntry } = useAppContext(); // ✅ NEW
+  const { user, addWaterEntry } = useAppContext();
   const [waterEntries, setWaterEntries] = useState<WaterEntry[]>([]);
   const [currentAmount, setCurrentAmount] = useState(0);
   const [totalIntake, setTotalIntake] = useState(0);
@@ -83,7 +82,7 @@ const LogWaterScreen = () => {
 
   const handleAddWater = async () => {
     if (currentAmount <= 0 || !user) return;
-    await addWaterEntry(currentAmount); // ✅ USE CONTEXT FUNCTION
+    await addWaterEntry(currentAmount);
     setCurrentAmount(0);
     fetchWaterEntries();
   };
@@ -107,7 +106,7 @@ const LogWaterScreen = () => {
 
   const handleDelete = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'water', id)); // ✅ FIXED PATH
+    await deleteDoc(doc(db, 'users', user.uid, 'water', id));
     fetchWaterEntries();
   };
 
@@ -147,7 +146,7 @@ const LogWaterScreen = () => {
     <View style={styles.container}>
       <Title style={styles.totalText}>Total Water Today: {totalIntake} oz</Title>
 
-      {/* Glowing Hydration Bar */}
+      {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <View style={styles.progressWrapper}>
           <Animated.View style={[styles.glow, { opacity: progressAnim }]} />
@@ -160,16 +159,8 @@ const LogWaterScreen = () => {
         <Text style={styles.goalText}>Goal: {DAILY_GOAL} oz</Text>
       </View>
 
+      {/* Adjust Water Amount */}
       <View style={styles.adjustContainer}>
-        <Button
-          mode="contained"
-          onPress={() => setCurrentAmount((prev) => prev + 8)}
-          style={styles.pillButton}
-          buttonColor="#4FC3F7"
-        >
-          +
-        </Button>
-        <Text style={styles.amountText}>{currentAmount} oz</Text>
         <Button
           mode="contained"
           onPress={() => setCurrentAmount((prev) => Math.max(prev - 1, 0))}
@@ -177,6 +168,15 @@ const LogWaterScreen = () => {
           buttonColor="#4FC3F7"
         >
           –
+        </Button>
+        <Text style={styles.amountText}>{currentAmount} oz</Text>
+        <Button
+          mode="contained"
+          onPress={() => setCurrentAmount((prev) => prev + 8)}
+          style={styles.pillButton}
+          buttonColor="#4FC3F7"
+        >
+          +
         </Button>
       </View>
 
@@ -357,4 +357,3 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 });
-
