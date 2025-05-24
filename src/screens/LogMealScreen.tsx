@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
 } from 'react-native';
 import { TextInput, Button, Card, Snackbar, IconButton } from 'react-native-paper';
@@ -131,47 +130,6 @@ export default function LogMealScreen() {
     }
   };
 
-  const renderMeal = ({ item }: any) => {
-    const mealTime = item.timestamp?.toDate?.();
-    const favorited = isFavorite(item);
-    return (
-      <Card style={styles.card}>
-        <Card.Content style={{ backgroundColor: '#f9f9f9', borderRadius: 8 }}>
-          <View style={styles.mealRow}>
-            <Text style={[styles.mealText, { color: '#000' }]}> 
-              {item.type}: {item.name}
-            </Text>
-            <IconButton
-              icon={favorited ? 'star' : 'star-outline'}
-              size={20}
-              onPress={() => handleAddToFavorites(item)}
-              iconColor={favorited ? '#FFD700' : '#888'}
-            />
-          </View>
-          {mealTime && (
-            <Text style={[styles.timestampText, { color: '#333' }]}> 
-              {format(mealTime, 'hh:mm a')}
-            </Text>
-          )}
-        </Card.Content>
-      </Card>
-    );
-  };
-
-  const renderFavorite = ({ item }: any) => (
-    <TouchableOpacity
-      style={styles.favoriteCard}
-      onPress={() => {
-        setMealName(item.name);
-        setMealType(item.type);
-        setSnackbarMessage(`Pre-filled with: ${item.name} (${item.type})`);
-        setSnackbarVisible(true);
-      }}
-    >
-      <Text style={styles.favoriteText}>{item.type}: {item.name}</Text>
-    </TouchableOpacity>
-  );
-
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Log Your Meal</Text>
@@ -206,28 +164,51 @@ export default function LogMealScreen() {
       </Button>
 
       <Text style={styles.subheading}>Favorites</Text>
-      {favorites.length === 0 ? (
-        <Text style={{ marginBottom: 8, fontStyle: 'italic' }}>No favorites yet. Try adding one from Meal History!</Text>
-      ) : (
-        <FlatList
-          data={favorites}
-          keyExtractor={(item) => item.id}
-          renderItem={renderFavorite}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.favoritesList}
-          style={{ maxHeight: 100 }}
-        />
-      )}
+      <View style={styles.favoritesWrap}>
+        {favorites.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.favoriteCard}
+            onPress={() => {
+              setMealName(item.name);
+              setMealType(item.type);
+              setSnackbarMessage(`Pre-filled with: ${item.name} (${item.type})`);
+              setSnackbarVisible(true);
+            }}
+          >
+            <Text style={styles.favoriteText}>{item.type}: {item.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <Text style={styles.subheading}>Meals for {format(selectedDate, 'MMM dd')}</Text>
 
-      <FlatList
-        data={mealLog}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMeal}
-        contentContainerStyle={styles.mealList}
-      />
+      {mealLog.map((item) => {
+        const mealTime = item.timestamp?.toDate?.();
+        const favorited = isFavorite(item);
+        return (
+          <Card key={item.id} style={styles.card}>
+            <Card.Content style={{ backgroundColor: '#f9f9f9', borderRadius: 8 }}>
+              <View style={styles.mealRow}>
+                <Text style={[styles.mealText, { color: '#000' }]}> 
+                  {item.type}: {item.name}
+                </Text>
+                <IconButton
+                  icon={favorited ? 'star' : 'star-outline'}
+                  size={20}
+                  onPress={() => handleAddToFavorites(item)}
+                  iconColor={favorited ? '#FFD700' : '#888'}
+                />
+              </View>
+              {mealTime && (
+                <Text style={[styles.timestampText, { color: '#333' }]}> 
+                  {format(mealTime, 'hh:mm a')}
+                </Text>
+              )}
+            </Card.Content>
+          </Card>
+        );
+      })}
 
       <CalendarModal
         visible={isCalendarVisible}
@@ -286,17 +267,19 @@ const styles = StyleSheet.create({
   saveButton: {
     marginBottom: 12,
   },
-  favoritesList: {
-    paddingBottom: 8,
+  favoritesWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 8,
   },
   favoriteCard: {
     backgroundColor: '#e0f7fa',
     padding: 10,
     borderRadius: 8,
-    marginRight: 10,
-    minWidth: 180,
-    maxWidth: 220,
-    flexShrink: 0,
+    minWidth: 160,
+    marginRight: 8,
+    marginBottom: 8,
   },
   favoriteText: {
     fontSize: 14,
