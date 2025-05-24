@@ -4,22 +4,20 @@ import {
   FlatList,
   Modal,
   StyleSheet,
-  Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
+  TouchableOpacity,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   Text,
   Button,
   Card,
   IconButton,
   Title,
+  Snackbar,
 } from 'react-native-paper';
-import { useAppContext } from '../context/AppContext';
-import { db } from '../services/firebase';
+import { auth, db } from '../services/firebase';
 import {
   collection,
   getDocs,
@@ -29,8 +27,9 @@ import {
   Timestamp,
   orderBy,
   query,
+  where,
+  addDoc,
 } from 'firebase/firestore';
-import { auth } from '../services/firebase';
 
 interface MealEntry {
   id: string;
@@ -44,8 +43,9 @@ const MealHistoryScreen = () => {
   const [editingMeal, setEditingMeal] = useState<MealEntry | null>(null);
   const [editedName, setEditedName] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [favorites, setFavorites] = useState<any[]>([]);
   const user = auth.currentUser;
 
   useEffect(() => {
@@ -66,8 +66,25 @@ const MealHistoryScreen = () => {
       }
     };
 
+    const fetchFavorites = async () => {
+      const favRef = collection(db, 'users', user.uid, 'favorites');
+      const snapshot = await getDocs(favRef);
+      const favs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setFavorites(favs);
+    };
+
     fetchMeals();
+    fetchFavorites();
   }, [user]);
+
+  const isFavorite = (meal: MealEntry) => {
+    return favorites.some(
+      (fav) => fav.name === meal.name && fav.type === meal.type
+    );
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -101,6 +118,35 @@ const MealHistoryScreen = () => {
     }
   };
 
+  const handleAddFavorite = async (meal: MealEntry) => {
+    try {
+      if (!user) return;
+      const favoritesRef = collection(db, 'users', user.uid, 'favorites');
+      const q = query(
+        favoritesRef,
+        where('name', '==', meal.name),
+        where('type', '==', meal.type)
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        setSnackbarMessage('Already in favorites!');
+        setSnackbarVisible(true);
+        return;
+      }
+
+      await addDoc(favoritesRef, {
+        name: meal.name,
+        type: meal.type,
+        timestamp: meal.timestamp || Timestamp.now(),
+      });
+
+      setSnackbarMessage('Added to favorites!');
+      setSnackbarVisible(true);
+    } catch (error) {
+      console.error('Error adding to favorites:', error);
+    }
+  };
+
   const formatFullDateTime = (timestamp?: Timestamp) => {
     if (!timestamp) return '';
     const date = timestamp.toDate();
@@ -113,47 +159,22 @@ const MealHistoryScreen = () => {
     });
   };
 
-  const isSameDay = (timestamp: Timestamp | undefined, date: Date) => {
-    if (!timestamp) return false;
-    const entryDate = timestamp.toDate();
-    return (
-      entryDate.getDate() === date.getDate() &&
-      entryDate.getMonth() === date.getMonth() &&
-      entryDate.getFullYear() === date.getFullYear()
-    );
-  };
-
-  const filteredMeals = mealHistory.filter((meal) =>
-    isSameDay(meal.timestamp, selectedDate)
-  );
-
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Title>Meal History</Title>
-        <IconButton icon="calendar" onPress={() => setShowDatePicker(true)} />
-      </View>
-
-      {showDatePicker && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display="default"
-          onChange={(event, date) => {
-            setShowDatePicker(false);
-            if (date) setSelectedDate(date);
-          }}
-        />
-      )}
-
       <FlatList
-        data={filteredMeals}
+        data={mealHistory}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <Card style={styles.card}>
-            <Card.Content>
-              <Title>{item.type}</Title>
-              <Text>{item.name}</Text>
+            <Card.Content style={styles.cardContent}>
+              <View style={styles.mealRow}>
+                <Text style={styles.mealText}>{item.type}: {item.name}</Text>
+                <IconButton
+                  icon={isFavorite(item) ? 'star' : 'star-outline'}
+                  onPress={() => handleAddFavorite(item)}
+                  iconColor={isFavorite(item) ? '#FFD700' : '#888'}
+                />
+              </View>
               <Text style={styles.timestamp}>{formatFullDateTime(item.timestamp)}</Text>
             </Card.Content>
             <Card.Actions>
@@ -162,6 +183,7 @@ const MealHistoryScreen = () => {
             </Card.Actions>
           </Card>
         )}
+        contentContainerStyle={{ paddingBottom: 80 }}
       />
 
       <Modal visible={modalVisible} animationType="slide" transparent>
@@ -183,6 +205,15 @@ const MealHistoryScreen = () => {
           </Card>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        style={{ backgroundColor: '#4caf50' }}
+      >
+        {snackbarMessage}
+      </Snackbar>
     </View>
   );
 };
@@ -193,14 +224,30 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#fff',
   },
-  headerRow: {
+  card: {
+    marginBottom: 10,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  cardContent: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+    padding: 10,
+  },
+  mealRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
   },
-  card: {
-    marginBottom: 10,
+  mealText: {
+    fontSize: 16,
+    color: '#000',
+    flexShrink: 1,
+  },
+  timestamp: {
+    marginTop: 5,
+    fontStyle: 'italic',
+    color: '#333',
   },
   modalContainer: {
     flex: 1,
@@ -213,11 +260,6 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 10,
-  },
-  timestamp: {
-    marginTop: 5,
-    fontStyle: 'italic',
-    color: 'gray',
   },
 });
 

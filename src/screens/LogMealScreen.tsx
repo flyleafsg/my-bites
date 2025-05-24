@@ -6,12 +6,20 @@ import {
   FlatList,
   TouchableOpacity,
 } from 'react-native';
-import { TextInput, Button, Card } from 'react-native-paper';
+import { TextInput, Button, Card, Snackbar, IconButton } from 'react-native-paper';
 import { AppContext } from '../context/AppContext';
-import { Timestamp, collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
+import {
+  Timestamp,
+  collection,
+  addDoc,
+  query,
+  where,
+  onSnapshot,
+  getDocs,
+} from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { format } from 'date-fns';
-import CalendarModal from '../components/CalendarModal'; // ✅ Import calendar
+import CalendarModal from '../components/CalendarModal';
 
 export default function LogMealScreen() {
   const { user } = useContext(AppContext)!;
@@ -20,6 +28,9 @@ export default function LogMealScreen() {
   const [mealLog, setMealLog] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const fetchMealsForDate = (date: Date) => {
     if (!user) return;
@@ -46,12 +57,59 @@ export default function LogMealScreen() {
     return unsubscribe;
   };
 
+  const fetchFavorites = async () => {
+    if (!user) return;
+    const favRef = collection(db, 'users', user.uid, 'favorites');
+    const snapshot = await getDocs(favRef);
+    const favs = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    console.log('⭐ Fetched Favorites:', favs);
+    setFavorites(favs);
+  };
+
+  const isFavorite = (meal: any) => {
+    return favorites.some(
+      (fav) => fav.name === meal.name && fav.type === meal.type
+    );
+  };
+
+  const handleAddToFavorites = async (meal: any) => {
+    if (!user) return;
+    try {
+      const favRef = collection(db, 'users', user.uid, 'favorites');
+      const snapshot = await getDocs(
+        query(favRef, where('name', '==', meal.name), where('type', '==', meal.type))
+      );
+      if (!snapshot.empty) {
+        setSnackbarMessage('Already in favorites');
+        setSnackbarVisible(true);
+        return;
+      }
+      await addDoc(favRef, {
+        name: meal.name,
+        type: meal.type,
+        timestamp: meal.timestamp || Timestamp.now(),
+      });
+      setSnackbarMessage(`Added to favorites: ${meal.name} (${meal.type})`);
+      setSnackbarVisible(true);
+      fetchFavorites();
+    } catch (error) {
+      console.error('Error adding to favorites:', error);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = fetchMealsForDate(selectedDate);
     return () => {
       if (unsubscribe) unsubscribe();
     };
   }, [selectedDate]);
+
+  useEffect(() => {
+    fetchFavorites();
+  }, []);
 
   const handleSaveMeal = async () => {
     if (!user || !mealName.trim()) return;
@@ -66,6 +124,8 @@ export default function LogMealScreen() {
       const mealsRef = collection(db, 'users', user.uid, 'meals');
       await addDoc(mealsRef, newMeal);
       setMealName('');
+      setSnackbarMessage('Meal saved successfully');
+      setSnackbarVisible(true);
     } catch (error) {
       console.error('Error saving meal:', error);
     }
@@ -73,14 +133,23 @@ export default function LogMealScreen() {
 
   const renderMeal = ({ item }: any) => {
     const mealTime = item.timestamp?.toDate?.();
+    const favorited = isFavorite(item);
     return (
       <Card style={styles.card}>
-        <Card.Content>
-          <Text style={styles.mealText}>
-            {item.type}: {item.name}
-          </Text>
+        <Card.Content style={{ backgroundColor: '#f9f9f9', borderRadius: 8 }}>
+          <View style={styles.mealRow}>
+            <Text style={[styles.mealText, { color: '#000' }]}> 
+              {item.type}: {item.name}
+            </Text>
+            <IconButton
+              icon={favorited ? 'star' : 'star-outline'}
+              size={20}
+              onPress={() => handleAddToFavorites(item)}
+              iconColor={favorited ? '#FFD700' : '#888'}
+            />
+          </View>
           {mealTime && (
-            <Text style={styles.timestampText}>
+            <Text style={[styles.timestampText, { color: '#333' }]}> 
               {format(mealTime, 'hh:mm a')}
             </Text>
           )}
@@ -89,14 +158,26 @@ export default function LogMealScreen() {
     );
   };
 
+  const renderFavorite = ({ item }: any) => (
+    <TouchableOpacity
+      style={styles.favoriteCard}
+      onPress={() => {
+        setMealName(item.name);
+        setMealType(item.type);
+        setSnackbarMessage(`Pre-filled with: ${item.name} (${item.type})`);
+        setSnackbarVisible(true);
+      }}
+    >
+      <Text style={styles.favoriteText}>{item.type}: {item.name}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Log Your Meal</Text>
 
       <TouchableOpacity onPress={() => setIsCalendarVisible(true)}>
-        <Text style={styles.dateText}>
-          {format(selectedDate, 'MMMM dd, yyyy')}
-        </Text>
+        <Text style={styles.dateText}>{format(selectedDate, 'MMMM dd, yyyy')}</Text>
       </TouchableOpacity>
 
       <TextInput
@@ -124,6 +205,21 @@ export default function LogMealScreen() {
         Save Meal
       </Button>
 
+      <Text style={styles.subheading}>Favorites</Text>
+      {favorites.length === 0 ? (
+        <Text style={{ marginBottom: 8, fontStyle: 'italic' }}>No favorites yet. Try adding one from Meal History!</Text>
+      ) : (
+        <FlatList
+          data={favorites}
+          keyExtractor={(item) => item.id}
+          renderItem={renderFavorite}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.favoritesList}
+          style={{ maxHeight: 100 }}
+        />
+      )}
+
       <Text style={styles.subheading}>Meals for {format(selectedDate, 'MMM dd')}</Text>
 
       <FlatList
@@ -133,13 +229,21 @@ export default function LogMealScreen() {
         contentContainerStyle={styles.mealList}
       />
 
-      {/* ✅ Integrated CalendarModal */}
       <CalendarModal
         visible={isCalendarVisible}
         onClose={() => setIsCalendarVisible(false)}
         onSelectDate={(date) => setSelectedDate(date)}
         selectedDate={selectedDate}
       />
+
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        style={{ backgroundColor: '#4caf50' }}
+      >
+        {snackbarMessage}
+      </Snackbar>
     </View>
   );
 }
@@ -182,15 +286,40 @@ const styles = StyleSheet.create({
   saveButton: {
     marginBottom: 12,
   },
+  favoritesList: {
+    paddingBottom: 8,
+  },
+  favoriteCard: {
+    backgroundColor: '#e0f7fa',
+    padding: 10,
+    borderRadius: 8,
+    marginRight: 10,
+    minWidth: 180,
+    maxWidth: 220,
+    flexShrink: 0,
+  },
+  favoriteText: {
+    fontSize: 14,
+    color: '#333',
+  },
   mealList: {
     paddingBottom: 100,
   },
   card: {
     marginVertical: 6,
-    padding: 8,
+    padding: 0,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+  },
+  mealRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   mealText: {
     fontSize: 16,
+    flexShrink: 1,
   },
   timestampText: {
     fontSize: 12,
