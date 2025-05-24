@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   FlatList,
-  Modal,
   StyleSheet,
   Alert,
   Platform,
   Animated,
+  Image,
 } from 'react-native';
 import {
   Text,
@@ -28,6 +28,9 @@ import {
   orderBy,
   query,
 } from 'firebase/firestore';
+import BadgeUnlockModal from '../components/BadgeUnlockModal';
+import HydrationHeroIcon from '../../assets/hydration-hero.png'; // ✅ correct
+
 
 type WaterEntry = {
   id: string;
@@ -45,6 +48,7 @@ const LogWaterScreen = () => {
   const [selectedEntry, setSelectedEntry] = useState<WaterEntry | null>(null);
   const [editedAmount, setEditedAmount] = useState(0);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [badgeUnlocked, setBadgeUnlocked] = useState(false);
   const [progressAnim] = useState(new Animated.Value(0));
 
   const fetchWaterEntries = async () => {
@@ -65,6 +69,12 @@ const LogWaterScreen = () => {
     setWaterEntries(data);
     setTotalIntake(total);
     animateProgress(total);
+
+    // Badge trigger logic
+    if (total >= DAILY_GOAL && !badgeUnlocked) {
+      setBadgeUnlocked(true);
+      setIsModalVisible(true);
+    }
   };
 
   const animateProgress = (intake: number) => {
@@ -197,39 +207,13 @@ const LogWaterScreen = () => {
         contentContainerStyle={styles.list}
       />
 
-      {/* Edit Modal */}
-      <Modal visible={isModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text>Edit Water Amount</Text>
-            <View style={styles.editAdjustContainer}>
-              <Button
-                mode="contained"
-                onPress={() => setEditedAmount((prev) => Math.max(prev - 1, 0))}
-                style={styles.smallPillButton}
-                buttonColor="#4FC3F7"
-              >
-                –
-              </Button>
-              <Text style={styles.editAmountText}>{editedAmount} oz</Text>
-              <Button
-                mode="contained"
-                onPress={() => setEditedAmount((prev) => prev + 8)}
-                style={styles.smallPillButton}
-                buttonColor="#4FC3F7"
-              >
-                +
-              </Button>
-            </View>
-            <Button mode="contained" onPress={handleSaveEdit} style={styles.button}>
-              Save
-            </Button>
-            <Button onPress={() => setIsModalVisible(false)} style={styles.button}>
-              Cancel
-            </Button>
-          </View>
-        </View>
-      </Modal>
+      {/* Badge Unlock Modal */}
+      <BadgeUnlockModal
+        visible={isModalVisible && badgeUnlocked && totalIntake >= DAILY_GOAL}
+        badgeName="Hydration Hero"
+        badgeImage={HydrationHeroIcon}
+        onDismiss={() => setIsModalVisible(false)}
+      />
     </View>
   );
 };
@@ -322,38 +306,5 @@ const styles = StyleSheet.create({
   iconContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  modalContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 12,
-    elevation: 5,
-  },
-  editAdjustContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 12,
-  },
-  smallPillButton: {
-    borderRadius: 50,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editAmountText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0288D1',
-  },
-  button: {
-    marginTop: 8,
   },
 });
