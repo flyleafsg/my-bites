@@ -15,6 +15,8 @@ import {
   where,
   onSnapshot,
   getDocs,
+  deleteDoc,
+  doc,
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { format } from 'date-fns';
@@ -64,7 +66,6 @@ export default function LogMealScreen() {
       id: doc.id,
       ...doc.data(),
     }));
-    console.log('⭐ Fetched Favorites:', favs);
     setFavorites(favs);
   };
 
@@ -74,7 +75,7 @@ export default function LogMealScreen() {
     );
   };
 
-  const handleAddToFavorites = async (meal: any) => {
+  const handleToggleFavorite = async (meal: any) => {
     if (!user) return;
     try {
       const favRef = collection(db, 'users', user.uid, 'favorites');
@@ -82,20 +83,25 @@ export default function LogMealScreen() {
         query(favRef, where('name', '==', meal.name), where('type', '==', meal.type))
       );
       if (!snapshot.empty) {
-        setSnackbarMessage('Already in favorites');
-        setSnackbarVisible(true);
-        return;
+        const docToRemove = snapshot.docs.find(
+          (docSnap) => docSnap.data().name === meal.name && docSnap.data().type === meal.type
+        );
+        if (docToRemove) {
+          await deleteDoc(doc(db, 'users', user.uid, 'favorites', docToRemove.id));
+          setSnackbarMessage(`Removed from favorites: ${meal.name}`);
+        }
+      } else {
+        await addDoc(favRef, {
+          name: meal.name,
+          type: meal.type,
+          timestamp: meal.timestamp || Timestamp.now(),
+        });
+        setSnackbarMessage(`Added to favorites: ${meal.name}`);
       }
-      await addDoc(favRef, {
-        name: meal.name,
-        type: meal.type,
-        timestamp: meal.timestamp || Timestamp.now(),
-      });
-      setSnackbarMessage(`Added to favorites: ${meal.name} (${meal.type})`);
       setSnackbarVisible(true);
       fetchFavorites();
     } catch (error) {
-      console.error('Error adding to favorites:', error);
+      console.error('Error toggling favorite:', error);
     }
   };
 
@@ -176,7 +182,15 @@ export default function LogMealScreen() {
               setSnackbarVisible(true);
             }}
           >
-            <Text style={styles.favoriteText}>{item.type}: {item.name}</Text>
+            <View style={styles.mealRow}>
+              <Text style={styles.favoriteText}>{item.type}: {item.name}</Text>
+              <IconButton
+                icon="star"
+                size={16}
+                onPress={() => handleToggleFavorite(item)}
+                iconColor="#FFD700"
+              />
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -196,7 +210,7 @@ export default function LogMealScreen() {
                 <IconButton
                   icon={favorited ? 'star' : 'star-outline'}
                   size={20}
-                  onPress={() => handleAddToFavorites(item)}
+                  onPress={() => handleToggleFavorite(item)}
                   iconColor={favorited ? '#FFD700' : '#888'}
                 />
               </View>
@@ -284,6 +298,7 @@ const styles = StyleSheet.create({
   favoriteText: {
     fontSize: 14,
     color: '#333',
+    flexShrink: 1,
   },
   mealList: {
     paddingBottom: 100,
