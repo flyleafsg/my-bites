@@ -1,72 +1,126 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Text, Button, Card } from 'react-native-paper';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { Text, Button, Title } from 'react-native-paper';
+import { auth, db } from '../services/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/AppNavigator';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { calculateHydrationStreak } from '../utils/calculateStreak';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type WaterEntry = {
+  amount: number;
+  timestamp: Date;
+};
 
-export default function HomeScreen() {
-  const navigation = useNavigation<NavigationProp>();
+const HomeScreen = () => {
+  const [hydrationStreak, setHydrationStreak] = useState<number>(0);
+  const [user, setUser] = useState<User | null>(null);
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        console.log('✅ Firebase user signed in:', firebaseUser.uid);
+        setUser(firebaseUser);
+
+        const waterRef = collection(db, 'users', firebaseUser.uid, 'water');
+        const q = query(waterRef);
+
+        const unsubscribeWater = onSnapshot(q, (snapshot) => {
+          const entries: WaterEntry[] = snapshot.docs.map((doc) => {
+            const data = doc.data();
+            console.log('📦 Raw water doc data:', data);
+
+            const timestamp = data.timestamp?.toDate?.() ?? new Date(data.timestamp);
+            const amount = Number(data.amount ?? data.ounces);
+            console.log('🏠 Water log for streak:', { timestamp, amount });
+
+            return { timestamp, amount };
+          });
+
+          const streak = calculateHydrationStreak(entries);
+          console.log('🏠 Hydration streak (Home):', streak);
+          setHydrationStreak(streak);
+        });
+
+        // Cleanup Firestore listener
+        return () => unsubscribeWater();
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>Welcome to MyBites!</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Title style={styles.title}>Meal Diary Dashboard</Title>
+      <Text style={styles.subtitle}>Welcome to Meal Diary</Text>
+      {user && (
+        <Text style={styles.email}>Signed in as: {user.email}</Text>
+      )}
+      <Text style={styles.streak}>
+        Hydration Streak: <Text style={styles.emoji}>💧 {hydrationStreak} Days</Text>
+      </Text>
 
-      <Card style={styles.card}>
-        <Card.Content>
-          <Button mode="contained" onPress={() => navigation.navigate('LogMeal')} style={styles.button}>
-            Log Meal
-          </Button>
-          <Button mode="contained" onPress={() => navigation.navigate('LogWater')} style={styles.button}>
-            Log Water
-          </Button>
-          <Button mode="contained" onPress={() => navigation.navigate('MealHistory')} style={styles.button}>
-            View Meal History
-          </Button>
-          <Button mode="contained" onPress={() => navigation.navigate('WaterHistory')} style={styles.button}>
-            View Water History
-          </Button>
-        </Card.Content>
-      </Card>
-
-      <Card style={styles.summaryCard}>
-        <Card.Content>
-          <Text style={styles.summaryText}>Today's Summary coming soon...</Text>
-        </Card.Content>
-      </Card>
-    </View>
+      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('LogMeal')}>
+        Log Meal
+      </Button>
+      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('LogWater')}>
+        Log Water
+      </Button>
+      <Button mode="outlined" style={styles.button} onPress={() => navigation.navigate('MealHistory')}>
+        View Meal History
+      </Button>
+      <Button mode="outlined" style={styles.button} onPress={() => navigation.navigate('WaterHistory')}>
+        View Water History
+      </Button>
+      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('BadgeCollection')}>
+        View Badges
+      </Button>
+    </ScrollView>
   );
-}
+};
+
+export default HomeScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 20,
-    justifyContent: 'flex-start',
     backgroundColor: '#fff',
+    flexGrow: 1,
+    justifyContent: 'center',
   },
- heading: {
-  fontSize: 28,
-  fontWeight: '700',
-  color: '#333', // dark grey for contrast
-  marginBottom: 20,
-  textAlign: 'center',
-},
-
-  card: {
-    marginBottom: 20,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#6A1B9A',
+    marginBottom: 4,
   },
-  button: {
-    marginVertical: 6,
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#888',
+    marginBottom: 8,
   },
-  summaryCard: {
-    marginTop: 20,
+  email: {
+    textAlign: 'center',
+    fontSize: 12,
+    marginBottom: 4,
+    color: '#444',
   },
-  summaryText: {
+  streak: {
     textAlign: 'center',
     fontSize: 16,
-    color: '#666',
+    marginBottom: 20,
+    color: '#1976D2',
+  },
+  emoji: {
+    fontWeight: 'bold',
+    color: '#1976D2',
+  },
+  button: {
+    marginVertical: 8,
+    borderRadius: 20,
   },
 });

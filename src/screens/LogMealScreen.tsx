@@ -1,148 +1,327 @@
-import React, { useState } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { Text, TextInput, Button } from 'react-native-paper';
-import { useAppContext } from '../context/AppContext';
+import React, { useState, useContext, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
+import { TextInput, Button, Card, Snackbar, IconButton } from 'react-native-paper';
+import { AppContext } from '../context/AppContext';
+import {
+  Timestamp,
+  collection,
+  addDoc,
+  query,
+  where,
+  onSnapshot,
+  getDocs,
+  deleteDoc,
+  doc,
+} from 'firebase/firestore';
+import { db } from '../services/firebase';
+import { format } from 'date-fns';
+import CalendarModal from '../components/CalendarModal';
 
-interface MealEntry {
-  name: string;
-  type: string;
-}
+export default function LogMealScreen() {
+  const { user } = useContext(AppContext)!;
+  const [mealName, setMealName] = useState('');
+  const [mealType, setMealType] = useState('Breakfast');
+  const [mealLog, setMealLog] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isCalendarVisible, setIsCalendarVisible] = useState(false);
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
-const LogMealScreen = () => {
-  const { mealLog, addMealItem } = useAppContext();
-  const [foodItem, setFoodItem] = useState('');
-  const [mealType, setMealType] = useState<'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('Breakfast');
+  const fetchMealsForDate = (date: Date) => {
+    if (!user) return;
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
 
-  const handleAddItem = () => {
-    if (foodItem.trim() !== '') {
-      const newEntry: MealEntry = {
-        name: foodItem.trim(),
-        type: mealType,
-      };
-      addMealItem(newEntry);
-      setFoodItem('');
+    const mealsRef = collection(db, 'users', user.uid, 'meals');
+    const q = query(
+      mealsRef,
+      where('timestamp', '>=', Timestamp.fromDate(startOfDay)),
+      where('timestamp', '<=', Timestamp.fromDate(endOfDay))
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const meals = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setMealLog(meals);
+    });
+
+    return unsubscribe;
+  };
+
+  const fetchFavorites = async () => {
+    if (!user) return;
+    const favRef = collection(db, 'users', user.uid, 'favorites');
+    const snapshot = await getDocs(favRef);
+    const favs = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setFavorites(favs);
+  };
+
+  const isFavorite = (meal: any) => {
+    return favorites.some(
+      (fav) => fav.name === meal.name && fav.type === meal.type
+    );
+  };
+
+  const handleToggleFavorite = async (meal: any) => {
+    if (!user) return;
+    try {
+      const favRef = collection(db, 'users', user.uid, 'favorites');
+      const snapshot = await getDocs(
+        query(favRef, where('name', '==', meal.name), where('type', '==', meal.type))
+      );
+      if (!snapshot.empty) {
+        const docToRemove = snapshot.docs.find(
+          (docSnap) => docSnap.data().name === meal.name && docSnap.data().type === meal.type
+        );
+        if (docToRemove) {
+          await deleteDoc(doc(db, 'users', user.uid, 'favorites', docToRemove.id));
+          setSnackbarMessage(`Removed from favorites: ${meal.name}`);
+        }
+      } else {
+        await addDoc(favRef, {
+          name: meal.name,
+          type: meal.type,
+          timestamp: meal.timestamp || Timestamp.now(),
+        });
+        setSnackbarMessage(`Added to favorites: ${meal.name}`);
+      }
+      setSnackbarVisible(true);
+      fetchFavorites();
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = fetchMealsForDate(selectedDate);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [selectedDate]);
+
+  useEffect(() => {
+    fetchFavorites();
+  }, []);
+
+  const handleSaveMeal = async () => {
+    if (!user || !mealName.trim()) return;
+
+    const newMeal = {
+      name: mealName.trim(),
+      type: mealType,
+      timestamp: Timestamp.fromDate(selectedDate),
+    };
+
+    try {
+      const mealsRef = collection(db, 'users', user.uid, 'meals');
+      await addDoc(mealsRef, newMeal);
+      setMealName('');
+      setSnackbarMessage('Meal saved successfully');
+      setSnackbarVisible(true);
+    } catch (error) {
+      console.error('Error saving meal:', error);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Add Food Items</Text>
+      <Text style={styles.heading}>Log Your Meal</Text>
 
-      <View style={styles.mealTypeRow}>
-        {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((type) => (
-          <TouchableOpacity
+      <TouchableOpacity onPress={() => setIsCalendarVisible(true)}>
+        <Text style={styles.dateText}>{format(selectedDate, 'MMMM dd, yyyy')}</Text>
+      </TouchableOpacity>
+
+      <TextInput
+        label="Meal Description"
+        value={mealName}
+        onChangeText={setMealName}
+        style={styles.input}
+        mode="outlined"
+      />
+
+      <View style={styles.buttonRow}>
+        {['Breakfast', 'Lunch', 'Dinner', 'Snacks'].map((type) => (
+          <Button
             key={type}
-            style={[
-              styles.mealTypeButton,
-              mealType === type && styles.mealTypeButtonSelected,
-            ]}
-            onPress={() => setMealType(type as any)}
+            mode={mealType === type ? 'contained' : 'outlined'}
+            onPress={() => setMealType(type)}
+            style={styles.mealTypeButton}
           >
-            <Text
-              style={[
-                styles.mealTypeText,
-                mealType === type && styles.mealTypeTextSelected,
-              ]}
-            >
-              {type}
-            </Text>
+            {type}
+          </Button>
+        ))}
+      </View>
+
+      <Button mode="contained" onPress={handleSaveMeal} style={styles.saveButton}>
+        Save Meal
+      </Button>
+
+      <Text style={styles.subheading}>Favorites</Text>
+      <View style={styles.favoritesWrap}>
+        {favorites.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.favoriteCard}
+            onPress={() => {
+              setMealName(item.name);
+              setMealType(item.type);
+              setSnackbarMessage(`Pre-filled with: ${item.name} (${item.type})`);
+              setSnackbarVisible(true);
+            }}
+          >
+            <View style={styles.mealRow}>
+              <Text style={styles.favoriteText}>{item.type}: {item.name}</Text>
+              <IconButton
+                icon="star"
+                size={16}
+                onPress={() => handleToggleFavorite(item)}
+                iconColor="#FFD700"
+              />
+            </View>
           </TouchableOpacity>
         ))}
       </View>
 
-      <View style={styles.inputRow}>
-        <TextInput
-          placeholder="Enter a food item"
-          value={foodItem}
-          onChangeText={setFoodItem}
-          mode="flat"
-          style={styles.input}
-          placeholderTextColor="#ccc"
-        />
-        <Button mode="contained" onPress={handleAddItem} style={styles.addButton}>
-          Add
-        </Button>
-      </View>
+      <Text style={styles.subheading}>Meals for {format(selectedDate, 'MMM dd')}</Text>
 
-      <Text style={styles.subheading}>Items in this meal</Text>
-      <FlatList
-        data={mealLog}
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={({ item }: { item: MealEntry }) => (
-          <Text style={styles.itemText}>• {item.name} ({item.type})</Text>
-        )}
-        ListEmptyComponent={<Text style={styles.emptyText}>No items added yet.</Text>}
+      {mealLog.map((item) => {
+        const mealTime = item.timestamp?.toDate?.();
+        const favorited = isFavorite(item);
+        return (
+          <Card key={item.id} style={styles.card}>
+            <Card.Content style={{ backgroundColor: '#f9f9f9', borderRadius: 8 }}>
+              <View style={styles.mealRow}>
+                <Text style={[styles.mealText, { color: '#000' }]}> 
+                  {item.type}: {item.name}
+                </Text>
+                <IconButton
+                  icon={favorited ? 'star' : 'star-outline'}
+                  size={20}
+                  onPress={() => handleToggleFavorite(item)}
+                  iconColor={favorited ? '#FFD700' : '#888'}
+                />
+              </View>
+              {mealTime && (
+                <Text style={[styles.timestampText, { color: '#333' }]}> 
+                  {format(mealTime, 'hh:mm a')}
+                </Text>
+              )}
+            </Card.Content>
+          </Card>
+        );
+      })}
+
+      <CalendarModal
+        visible={isCalendarVisible}
+        onClose={() => setIsCalendarVisible(false)}
+        onSelectDate={(date) => setSelectedDate(date)}
+        selectedDate={selectedDate}
       />
+
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        style={{ backgroundColor: '#4caf50' }}
+      >
+        {snackbarMessage}
+      </Snackbar>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f4f4f4',
+    padding: 16,
   },
   heading: {
-    fontSize: 18,
+    fontSize: 24,
+    marginBottom: 8,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#3A2D60',
   },
   subheading: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
     marginTop: 20,
-    marginBottom: 10,
-    color: '#3A2D60',
+    marginBottom: 8,
   },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  dateText: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#007aff',
+    textAlign: 'center',
   },
   input: {
-    flex: 1,
-    backgroundColor: '#1a1a1a',
-    marginRight: 10,
-    color: '#fff',
+    marginBottom: 8,
+    fontSize: 14,
   },
-  addButton: {
-    borderRadius: 12,
-    backgroundColor: '#d5bfff',
-  },
-  itemText: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#5A3E85',
-  },
-  emptyText: {
-    fontStyle: 'italic',
-    color: '#888',
-  },
-  mealTypeRow: {
+  buttonRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
     justifyContent: 'space-between',
-    marginBottom: 15,
   },
   mealTypeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    margin: 4,
+    flexGrow: 1,
+  },
+  saveButton: {
+    marginBottom: 12,
+  },
+  favoritesWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 8,
+  },
+  favoriteCard: {
+    backgroundColor: '#e0f7fa',
+    padding: 10,
+    borderRadius: 8,
+    minWidth: 160,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  favoriteText: {
+    fontSize: 14,
+    color: '#333',
+    flexShrink: 1,
+  },
+  mealList: {
+    paddingBottom: 100,
+  },
+  card: {
+    marginVertical: 6,
+    padding: 0,
+    borderRadius: 10,
+    overflow: 'hidden',
     backgroundColor: '#fff',
   },
-  mealTypeButtonSelected: {
-    backgroundColor: '#d5bfff',
-    borderColor: '#5A3E85',
+  mealRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  mealTypeText: {
-    color: '#555',
-    fontWeight: 'bold',
+  mealText: {
+    fontSize: 16,
+    flexShrink: 1,
   },
-  mealTypeTextSelected: {
-    color: '#3A2D60',
+  timestampText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
   },
 });
-
-export default LogMealScreen;
