@@ -14,7 +14,8 @@ import {
   IconButton,
   Title,
 } from 'react-native-paper';
-import { db } from '../services/firebase';
+// NEW - modular style
+import { db, auth } from '../services/firebase.modular';
 import {
   collection,
   getDocs,

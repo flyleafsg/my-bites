@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Button, Title } from 'react-native-paper';
-import { auth, db } from '../services/firebase';
+// NEW - modular style
+import { db, auth } from '../services/firebase.modular';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import { collection, onSnapshot, query } from 'firebase/firestore';
