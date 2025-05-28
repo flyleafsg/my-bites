@@ -63,19 +63,48 @@ const HomeScreen = () => {
         Hydration Streak: <Text style={styles.emoji}>💧 {hydrationStreak} Days</Text>
       </Text>
 
-      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('LogMeal')}>
+      <Button
+        testID="LogMealButton"
+        mode="contained"
+        style={styles.button}
+        onPress={() => navigation.navigate('LogMeal')}
+      >
         Log Meal
       </Button>
-      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('LogWater')}>
+
+      <Button
+        testID="LogWaterButton"
+        mode="contained"
+        style={styles.button}
+        onPress={() => navigation.navigate('LogWater')}
+      >
         Log Water
       </Button>
-      <Button mode="outlined" style={styles.button} onPress={() => navigation.navigate('MealHistory')}>
+
+      <Button
+        testID="MealHistoryButton"
+        mode="outlined"
+        style={styles.button}
+        onPress={() => navigation.navigate('MealHistory')}
+      >
         View Meal History
       </Button>
-      <Button mode="outlined" style={styles.button} onPress={() => navigation.navigate('WaterHistory')}>
+
+      <Button
+        testID="WaterHistoryButton"
+        mode="outlined"
+        style={styles.button}
+        onPress={() => navigation.navigate('WaterHistory')}
+      >
         View Water History
       </Button>
-      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('BadgeCollection')}>
+
+      <Button
+        testID="BadgeCollectionButton"
+        mode="contained"
+        style={styles.button}
+        onPress={() => navigation.navigate('BadgeCollection')}
+      >
         View Badges
       </Button>
     </ScrollView>
