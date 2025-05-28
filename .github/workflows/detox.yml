@@ -8,7 +8,7 @@ on:
 
 jobs:
   detox-test:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest  # ✅ macOS is required for Android emulator
 
     steps:
       - name: 📥 Checkout repository
@@ -28,10 +28,12 @@ jobs:
           api-level: 30
           target: google_apis
           arch: x86_64
-          profile: pixel_5
+          profile: Nexus_6
+          emulator-options: -no-window -no-audio
+          disable-animations: true
           script: |
             npm run detox:build:android
-            npm run detox:test:android || true  # Allow artifact upload on failure
+            npm run detox:test:android || true
 
       - name: 🧾 List contents of artifacts folder
         run: ls -R ./artifacts || echo "No artifacts folder found"
