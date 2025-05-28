@@ -33,6 +33,12 @@ jobs:
             npm run detox:build:android
             npm run detox:test:android || true  # Allow artifact upload on failure
 
+      - name: 🧾 List contents of artifacts folder
+        run: ls -R ./artifacts || echo "No artifacts folder found"
+
+      - name: 🛠 Ensure artifacts folder exists
+        run: mkdir -p ./artifacts
+
       - name: 📦 Upload Detox Artifacts
         if: always()
         uses: actions/upload-artifact@v4
