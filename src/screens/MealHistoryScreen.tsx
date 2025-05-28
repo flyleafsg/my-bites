@@ -17,7 +17,8 @@ import {
   Title,
   Snackbar,
 } from 'react-native-paper';
-import { auth, db } from '../services/firebase';
+// NEW - modular style
+import { db, auth } from '../services/firebase.modular';
 import {
   collection,
   getDocs,

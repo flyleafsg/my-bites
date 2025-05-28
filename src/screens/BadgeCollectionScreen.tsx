@@ -3,7 +3,8 @@ import { View, StyleSheet, FlatList } from 'react-native';
 import { Text, Card, Title } from 'react-native-paper';
 import { waterStreakBadges, WaterStreakBadge } from '../constants/waterStreakBadges';
 import { calculateHydrationStreak } from '../utils/calculateStreak';
-import { auth, db } from '../services/firebase';
+// NEW - modular style
+import { db, auth } from '../services/firebase.modular';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 
 type WaterEntry = {

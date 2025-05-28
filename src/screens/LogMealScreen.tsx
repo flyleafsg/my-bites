@@ -18,7 +18,8 @@ import {
   deleteDoc,
   doc,
 } from 'firebase/firestore';
-import { db } from '../services/firebase';
+// NEW - modular style
+import { db, auth } from '../services/firebase.modular';
 import { format } from 'date-fns';
 import CalendarModal from '../components/CalendarModal';
 

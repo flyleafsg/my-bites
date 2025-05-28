@@ -17,7 +17,8 @@ import {
   ProgressBar,
 } from 'react-native-paper';
 import { useAppContext } from '../context/AppContext';
-import { db } from '../services/firebase';
+// NEW - modular style
+import { db, auth } from '../services/firebase.modular';
 import {
   collection,
   getDocs,

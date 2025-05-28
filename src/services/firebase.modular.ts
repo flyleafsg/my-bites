@@ -1,12 +1,17 @@
-// src/services/firebase.ts
-
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import 'firebase/compat/firestore';
+// firebase.modular.ts
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import {
+  getAuth,
+  signInWithPopup,
+  signInWithCredential,
+  GoogleAuthProvider,
+} from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 import Constants from 'expo-constants';
 import * as AuthSession from 'expo-auth-session';
 import { Platform } from 'react-native';
 
+// Firebase config from app.config.ts -> extra
 const firebaseConfig = {
   apiKey: Constants.expoConfig?.extra?.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: Constants.expoConfig?.extra?.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -16,24 +21,24 @@ const firebaseConfig = {
   appId: Constants.expoConfig?.extra?.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
+// Initialize Firebase (safe for hot reload/dev tools)
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-export const auth = firebase.auth();
-export const db = firebase.firestore();
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 
-// 🔐 Cross-platform Google Sign-In
+// 🔐 Cross-platform Google Sign-In using modular SDK
 export const signInWithGoogle = async () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
+  const provider = new GoogleAuthProvider();
 
   if (Platform.OS === 'web') {
     try {
-      const result = await auth.signInWithPopup(provider);
+      const result = await signInWithPopup(auth, provider);
       console.log('✅ Web Google Sign-In:', result.user?.email);
       return result.user;
     } catch (error) {
       console.error('❌ Web Google Sign-In Error:', error);
+      return null;
     }
   } else {
     try {
@@ -48,18 +53,20 @@ export const signInWithGoogle = async () => {
       });
 
       if (result.type === 'success') {
-        const credential = firebase.auth.GoogleAuthProvider.credential(
+        const credential = GoogleAuthProvider.credential(
           null,
           result.params.access_token
         );
-        const signInResult = await auth.signInWithCredential(credential);
+        const signInResult = await signInWithCredential(auth, credential);
         console.log('✅ Mobile Google Sign-In:', signInResult.user?.email);
         return signInResult.user;
       } else {
-        console.log('⚠️ Mobile Google Sign-In canceled or failed', result);
+        console.log('⚠️ Mobile Google Sign-In canceled or failed:', result);
+        return null;
       }
     } catch (error) {
       console.error('❌ Mobile Google Sign-In Error:', error);
+      return null;
     }
   }
 };
