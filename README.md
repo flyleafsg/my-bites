@@ -1,3 +1,13 @@
+![CI](https://github.com/flyleafsg/my-bites/actions/workflows/detox.yml/badge.svg)
+
+
+
+
+
+
+
+
+
 # Expo + Firebase Starter Template
 
 This is a minimal starter template for building React Native apps with [Expo SDK 53](https://docs.expo.dev) and Firebase. It includes:
