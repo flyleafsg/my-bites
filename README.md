@@ -1,5 +1,8 @@
 ![CI](https://github.com/flyleafsg/my-bites/actions/workflows/detox.yml/badge.svg)
 
+![Detox Tests](https://github.com/flyleafsg/my-bites/actions/workflows/detox.yml/badge.svg)
+
+
 
 
 
