@@ -2,48 +2,46 @@ name: Detox E2E Tests (Android)
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   detox-test:
-    runs-on: macos-latest  # ✅ macOS is required for Android emulator
+    runs-on: macos-latest
+    timeout-minutes: 20
 
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: 🧱 Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: 🧩 Install dependencies
+      - name: Install dependencies
         run: npm install
 
-      - name: 🛠️ Setup Android SDK and Run Detox Tests
+      - name: Install Detox CLI
+        run: npm install -g detox-cli
+
+      - name: Install Android SDK
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: 33
           target: google_apis
           arch: x86_64
-          profile: pixel_6a  # ✅ updated from Nexus_6 to match your emulator
-          emulator-options: -no-window -no-audio
+          profile: Pixel 6a API 36
+          emulator-boot-timeout: 600
           disable-animations: true
           script: |
-            npm run detox:build:android
-            npm run detox:test:android || true
+            npm run build:e2e
+            detox test --configuration android.emu.debug --headless
 
-      - name: 🧾 List contents of artifacts folder
-        run: ls -R ./artifacts || echo "No artifacts folder found"
-
-      - name: 🛠 Ensure artifacts folder exists
-        run: mkdir -p ./artifacts
-
-      - name: 📦 Upload Detox Artifacts
+      - name: Upload Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: detox-artifacts
           path: ./artifacts
