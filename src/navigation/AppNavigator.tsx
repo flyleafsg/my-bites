@@ -29,7 +29,6 @@ const AppNavigator = () => {
   if (isLoading) return null;
 
   return (
-    <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {hasOnboarded ? (
           <>
@@ -52,7 +51,7 @@ const AppNavigator = () => {
           </>
         )}
       </Stack.Navigator>
-    </NavigationContainer>
+    
   );
 };
 
