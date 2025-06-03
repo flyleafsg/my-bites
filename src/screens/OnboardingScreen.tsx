@@ -23,20 +23,20 @@ const OnboardingScreen = () => {
         {
           backgroundColor: '#fff',
           image: <Image source={require('../../assets/onboarding1.png')} style={styles.image} />,
-          title: 'Welcome to My Bites',
-          subtitle: 'Track meals, log water, and stay healthy.',
+          title: '',
+          subtitle: '',
         },
         {
           backgroundColor: '#fff',
           image: <Image source={require('../../assets/onboarding2.png')} style={styles.image} />,
-          title: 'Hydration Tracking',
-          subtitle: 'Track your water intake and earn badges!',
+          title: '',
+          subtitle: '',
         },
         {
           backgroundColor: '#fff',
           image: <Image source={require('../../assets/onboarding3.png')} style={styles.image} />,
-          title: 'Stay Motivated',
-          subtitle: 'Earn streaks, badges, and reach your goals.',
+          title: '',
+          subtitle: '',
         },
       ]}
     />
