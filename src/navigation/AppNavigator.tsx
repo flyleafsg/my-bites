@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -29,7 +28,6 @@ const AppNavigator = () => {
   if (isLoading) return null;
 
   return (
-    <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {hasOnboarded ? (
           <>
@@ -44,7 +42,6 @@ const AppNavigator = () => {
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         )}
       </Stack.Navigator>
-    </NavigationContainer>
   );
 };
 
