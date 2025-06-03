@@ -39,20 +39,16 @@ const OnboardingScreen = () => {
   };
 
   const handleNext = () => {
-  if (flatListRef.current) {
-    flatListRef.current.scrollToIndex({
-      index: Math.min(currentIndex + 1, slides.length - 1),
-      animated: true,
-    });
+  const nextIndex = currentIndex + 1;
 
-    // Manually update state immediately after scroll:
-    setCurrentIndex((prev) => Math.min(prev + 1, slides.length - 1));
-
-    if (currentIndex + 1 === slides.length) {
-      handleDone();
-    }
+  if (nextIndex < slides.length) {
+    flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+    setCurrentIndex(nextIndex);
+  } else {
+    handleDone();
   }
 };
+
 
   const handleSkip = () => {
     handleDone();
