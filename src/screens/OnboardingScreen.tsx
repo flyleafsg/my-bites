@@ -1,8 +1,10 @@
 import React from 'react';
-import { StyleSheet, Image, View } from 'react-native';
+import { StyleSheet, Image, View, Dimensions } from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+
+const { height } = Dimensions.get('window');
 
 const OnboardingScreen = () => {
   const navigation = useNavigation();
@@ -20,35 +22,40 @@ const OnboardingScreen = () => {
       onDone={handleDone}
       onSkip={handleDone}
       bottomBarHighlight={false}
+      containerStyles={{ flex: 1 }}
+      imageContainerStyles={{ flex: 1, justifyContent: 'center', alignItems: 'center', minHeight: height * 0.7 }}
       pages={[
         {
           backgroundColor: '#fff',
-          title: null,
-          subtitle: null,
+          title: ' ',
+          subtitle: ' ',
           image: (
-            <View style={styles.wrapper}>
-              <Image source={require('../../assets/onboarding1.png')} style={styles.image} />
-            </View>
+            <Image
+              source={require('../../assets/onboarding1.png')}
+              style={styles.image}
+            />
           ),
         },
         {
           backgroundColor: '#fff',
-          title: null,
-          subtitle: null,
+          title: ' ',
+          subtitle: ' ',
           image: (
-            <View style={styles.wrapper}>
-              <Image source={require('../../assets/onboarding2.png')} style={styles.image} />
-            </View>
+            <Image
+              source={require('../../assets/onboarding2.png')}
+              style={styles.image}
+            />
           ),
         },
         {
           backgroundColor: '#fff',
-          title: null,
-          subtitle: null,
+          title: ' ',
+          subtitle: ' ',
           image: (
-            <View style={styles.wrapper}>
-              <Image source={require('../../assets/onboarding3.png')} style={styles.image} />
-            </View>
+            <Image
+              source={require('../../assets/onboarding3.png')}
+              style={styles.image}
+            />
           ),
         },
       ]}
@@ -57,11 +64,6 @@ const OnboardingScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   image: {
     width: 300,
     height: 300,
