@@ -1,3 +1,5 @@
+// src/screens/OnboardingScreen.tsx
+
 import React from 'react';
 import { StyleSheet, Image } from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
@@ -19,22 +21,38 @@ const OnboardingScreen = () => {
     <Onboarding
       onDone={handleDone}
       onSkip={handleDone}
+      bottomBarHighlight={false}
       pages={[
         {
           backgroundColor: '#fff',
-          image: <Image source={require('../../assets/onboarding1.png')} style={styles.image} />,
+          image: (
+            <Image
+              source={require('../../assets/onboarding1.png')}
+              style={styles.image}
+            />
+          ),
           title: '',
           subtitle: '',
         },
         {
           backgroundColor: '#fff',
-          image: <Image source={require('../../assets/onboarding2.png')} style={styles.image} />,
+          image: (
+            <Image
+              source={require('../../assets/onboarding2.png')}
+              style={styles.image}
+            />
+          ),
           title: '',
           subtitle: '',
         },
         {
           backgroundColor: '#fff',
-          image: <Image source={require('../../assets/onboarding3.png')} style={styles.image} />,
+          image: (
+            <Image
+              source={require('../../assets/onboarding3.png')}
+              style={styles.image}
+            />
+          ),
           title: '',
           subtitle: '',
         },
