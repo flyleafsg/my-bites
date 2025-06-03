@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Dimensions,
   FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -14,18 +16,9 @@ import { useNavigation } from '@react-navigation/native';
 const { width, height } = Dimensions.get('window');
 
 const slides = [
-  {
-    key: '1',
-    image: require('../../assets/onboarding1.png'),
-  },
-  {
-    key: '2',
-    image: require('../../assets/onboarding2.png'),
-  },
-  {
-    key: '3',
-    image: require('../../assets/onboarding3.png'),
-  },
+  { key: '1', image: require('../../assets/onboarding1.png') },
+  { key: '2', image: require('../../assets/onboarding2.png') },
+  { key: '3', image: require('../../assets/onboarding3.png') },
 ];
 
 const OnboardingScreen = () => {
@@ -39,16 +32,15 @@ const OnboardingScreen = () => {
   };
 
   const handleNext = () => {
-  const nextIndex = currentIndex + 1;
-
-  if (nextIndex < slides.length) {
-    flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-    setCurrentIndex(nextIndex);
-  } else {
-    handleDone();
-  }
-};
-
+    if (currentIndex < slides.length - 1) {
+      flatListRef.current?.scrollToOffset({
+        offset: width * (currentIndex + 1),
+        animated: true,
+      });
+    } else {
+      handleDone();
+    }
+  };
 
   const handleSkip = () => {
     handleDone();
@@ -60,9 +52,10 @@ const OnboardingScreen = () => {
     </View>
   );
 
-  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-    setCurrentIndex(viewableItems[0]?.index ?? 0);
-  }).current;
+  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / width);
+    setCurrentIndex(index);
+  };
 
   return (
     <View style={styles.container}>
@@ -74,8 +67,8 @@ const OnboardingScreen = () => {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.key}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       />
 
       <View style={styles.footer}>
@@ -106,21 +99,9 @@ const OnboardingScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  slide: {
-    width,
-    height,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  image: {
-    width: 300,
-    height: 300,
-    resizeMode: 'contain',
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  slide: { width, height, justifyContent: 'center', alignItems: 'center' },
+  image: { width: 300, height: 300, resizeMode: 'contain' },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -128,24 +109,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingBottom: 30,
   },
-  footerText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  dotsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-    backgroundColor: '#bbb',
-  },
-  activeDot: {
-    backgroundColor: '#000',
-  },
+  footerText: { fontSize: 16, color: '#000' },
+  dotsContainer: { flexDirection: 'row', alignItems: 'center' },
+  dot: { width: 8, height: 8, borderRadius: 4, marginHorizontal: 4, backgroundColor: '#bbb' },
+  activeDot: { backgroundColor: '#000' },
 });
 
 export default OnboardingScreen;
