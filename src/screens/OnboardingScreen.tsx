@@ -29,6 +29,8 @@ const OnboardingScreen = () => {
               style={styles.image}
             />
           ),
+          title: ' ',
+          subtitle: ' ',
         },
         {
           backgroundColor: '#fff',
@@ -38,6 +40,8 @@ const OnboardingScreen = () => {
               style={styles.image}
             />
           ),
+          title: ' ',
+          subtitle: ' ',
         },
         {
           backgroundColor: '#fff',
@@ -47,6 +51,8 @@ const OnboardingScreen = () => {
               style={styles.image}
             />
           ),
+          title: ' ',
+          subtitle: ' ',
         },
       ]}
     />
