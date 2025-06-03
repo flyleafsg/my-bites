@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Image } from 'react-native';
+import { StyleSheet, Image, View } from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -23,36 +23,33 @@ const OnboardingScreen = () => {
       pages={[
         {
           backgroundColor: '#fff',
+          title: null,
+          subtitle: null,
           image: (
-            <Image
-              source={require('../../assets/onboarding1.png')}
-              style={styles.image}
-            />
+            <View style={styles.wrapper}>
+              <Image source={require('../../assets/onboarding1.png')} style={styles.image} />
+            </View>
           ),
-          title: ' ',
-          subtitle: ' ',
         },
         {
           backgroundColor: '#fff',
+          title: null,
+          subtitle: null,
           image: (
-            <Image
-              source={require('../../assets/onboarding2.png')}
-              style={styles.image}
-            />
+            <View style={styles.wrapper}>
+              <Image source={require('../../assets/onboarding2.png')} style={styles.image} />
+            </View>
           ),
-          title: ' ',
-          subtitle: ' ',
         },
         {
           backgroundColor: '#fff',
+          title: null,
+          subtitle: null,
           image: (
-            <Image
-              source={require('../../assets/onboarding3.png')}
-              style={styles.image}
-            />
+            <View style={styles.wrapper}>
+              <Image source={require('../../assets/onboarding3.png')} style={styles.image} />
+            </View>
           ),
-          title: ' ',
-          subtitle: ' ',
         },
       ]}
     />
@@ -60,6 +57,11 @@ const OnboardingScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   image: {
     width: 300,
     height: 300,
