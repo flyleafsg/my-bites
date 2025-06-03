@@ -111,6 +111,7 @@ const styles = StyleSheet.create({
   },
   slide: {
     width,
+    height, // use full screen height
     justifyContent: 'center',
     alignItems: 'center',
   },
