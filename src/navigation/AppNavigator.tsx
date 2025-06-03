@@ -18,6 +18,7 @@ const AppNavigator = () => {
 
   useEffect(() => {
     const checkOnboarding = async () => {
+      await AsyncStorage.removeItem('hasOnboarded'); // <-- TEMPORARILY ADD THIS
       const onboardFlag = await AsyncStorage.getItem('hasOnboarded');
       setHasOnboarded(onboardFlag === 'true');
       setIsLoading(false);
