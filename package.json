@@ -29,6 +29,7 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.2",
+    "react-native-onboarding-swiper": "^1.3.0",
     "react-native-paper": "^5.14.4",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
@@ -52,45 +53,44 @@
     }
   },
   "detox": {
-  "testRunner": "jest",
-  "runnerConfig": "e2e/config.json",
-  "configurations": {
-    "ios.sim.debug": {
-      "type": "ios.simulator",
-      "device": {
-        "type": "iPhone 14"
-      },
-      "build": "xcodebuild -workspace ios/MyBites.xcworkspace -scheme MyBites -configuration Debug -sdk iphonesimulator",
-      "binaryPath": "ios/build/Build/Products/Debug-iphonesimulator/MyBites.app",
-      "artifacts": {
-        "rootDir": "artifacts",
-        "plugins": {
-          "log": "all",
-          "screenshot": "failing",
-          "video": "none",
-          "timeline": "none"
+    "testRunner": "jest",
+    "runnerConfig": "e2e/config.json",
+    "configurations": {
+      "ios.sim.debug": {
+        "type": "ios.simulator",
+        "device": {
+          "type": "iPhone 14"
+        },
+        "build": "xcodebuild -workspace ios/MyBites.xcworkspace -scheme MyBites -configuration Debug -sdk iphonesimulator",
+        "binaryPath": "ios/build/Build/Products/Debug-iphonesimulator/MyBites.app",
+        "artifacts": {
+          "rootDir": "artifacts",
+          "plugins": {
+            "log": "all",
+            "screenshot": "failing",
+            "video": "none",
+            "timeline": "none"
+          }
         }
-      }
-    },
-    "android.emu.debug": {
-      "type": "android.emulator",
-      "device": {
-        "avdName": "Pixel_5_API_30"
       },
-      "build": "cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug",
-      "binaryPath": "android/app/build/outputs/apk/debug/app-debug.apk",
-      "testBinaryPath": "android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk",
-      "artifacts": {
-        "rootDir": "artifacts",
-        "plugins": {
-          "log": "all",
-          "screenshot": "failing",
-          "video": "none",
-          "timeline": "none"
+      "android.emu.debug": {
+        "type": "android.emulator",
+        "device": {
+          "avdName": "Pixel_5_API_30"
+        },
+        "build": "cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug",
+        "binaryPath": "android/app/build/outputs/apk/debug/app-debug.apk",
+        "testBinaryPath": "android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk",
+        "artifacts": {
+          "rootDir": "artifacts",
+          "plugins": {
+            "log": "all",
+            "screenshot": "failing",
+            "video": "none",
+            "timeline": "none"
+          }
         }
       }
     }
   }
-}
-
 }

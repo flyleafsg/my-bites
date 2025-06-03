@@ -1,31 +1,51 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import HomeScreen from '../screens/HomeScreen';
 import LogMealScreen from '../screens/LogMealScreen';
-import LogWaterScreen from '../screens/LogWaterScreen';
 import MealHistoryScreen from '../screens/MealHistoryScreen';
+import LogWaterScreen from '../screens/LogWaterScreen';
 import WaterHistoryScreen from '../screens/WaterHistoryScreen';
 import BadgeCollectionScreen from '../screens/BadgeCollectionScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 
-export type RootStackParamList = {
-  Home: undefined;
-  LogMeal: undefined;
-  LogWater: undefined;
-  MealHistory: undefined;
-  WaterHistory: undefined;
+const Stack = createNativeStackNavigator();
+
+const AppNavigator = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasOnboarded, setHasOnboarded] = useState(false);
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      const onboardFlag = await AsyncStorage.getItem('hasOnboarded');
+      setHasOnboarded(onboardFlag === 'true');
+      setIsLoading(false);
+    };
+    checkOnboarding();
+  }, []);
+
+  if (isLoading) return null;
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {hasOnboarded ? (
+          <>
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="LogMeal" component={LogMealScreen} />
+            <Stack.Screen name="MealHistory" component={MealHistoryScreen} />
+            <Stack.Screen name="LogWater" component={LogWaterScreen} />
+            <Stack.Screen name="WaterHistory" component={WaterHistoryScreen} />
+            <Stack.Screen name="Badges" component={BadgeCollectionScreen} />
+          </>
+        ) : (
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
-
-export default function AppNavigator() {
-  return (
-    <Stack.Navigator initialRouteName="Home">
-      <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Meal Diary Dashboard' }} />
-      <Stack.Screen name="LogMeal" component={LogMealScreen} options={{ title: 'Log a Meal' }} />
-      <Stack.Screen name="LogWater" component={LogWaterScreen} options={{ title: 'Log Water Intake' }} />
-      <Stack.Screen name="MealHistory" component={MealHistoryScreen} options={{ title: 'Meal History' }} />
-      <Stack.Screen name="WaterHistory" component={WaterHistoryScreen} options={{ title: 'Water Intake History' }} />
-      <Stack.Screen name="BadgeCollection" component={BadgeCollectionScreen}/>
-    </Stack.Navigator>
-  );
-}
+export default AppNavigator;
