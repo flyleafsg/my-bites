@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NavigationContainer } from '@react-navigation/native';
 
 import HomeScreen from '../screens/HomeScreen';
 import LogMealScreen from '../screens/LogMealScreen';
@@ -28,6 +29,7 @@ const AppNavigator = () => {
   if (isLoading) return null;
 
   return (
+    <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {hasOnboarded ? (
           <>
@@ -39,9 +41,18 @@ const AppNavigator = () => {
             <Stack.Screen name="Badges" component={BadgeCollectionScreen} />
           </>
         ) : (
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <>
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="LogMeal" component={LogMealScreen} />
+            <Stack.Screen name="MealHistory" component={MealHistoryScreen} />
+            <Stack.Screen name="LogWater" component={LogWaterScreen} />
+            <Stack.Screen name="WaterHistory" component={WaterHistoryScreen} />
+            <Stack.Screen name="Badges" component={BadgeCollectionScreen} />
+          </>
         )}
       </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 

@@ -35,10 +35,7 @@ const OnboardingScreen = () => {
 
   const handleDone = async () => {
     await AsyncStorage.setItem('hasOnboarded', 'true');
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Home' }],
-    });
+    navigation.navigate('Home');
   };
 
   const handleNext = () => {
@@ -111,7 +108,7 @@ const styles = StyleSheet.create({
   },
   slide: {
     width,
-    height, // use full screen height
+    height,
     justifyContent: 'center',
     alignItems: 'center',
   },
