@@ -1,5 +1,3 @@
-// src/screens/OnboardingScreen.tsx
-
 import React from 'react';
 import { StyleSheet, Image } from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
@@ -31,8 +29,6 @@ const OnboardingScreen = () => {
               style={styles.image}
             />
           ),
-          title: '',
-          subtitle: '',
         },
         {
           backgroundColor: '#fff',
@@ -42,8 +38,6 @@ const OnboardingScreen = () => {
               style={styles.image}
             />
           ),
-          title: '',
-          subtitle: '',
         },
         {
           backgroundColor: '#fff',
@@ -53,8 +47,6 @@ const OnboardingScreen = () => {
               style={styles.image}
             />
           ),
-          title: '',
-          subtitle: '',
         },
       ]}
     />
