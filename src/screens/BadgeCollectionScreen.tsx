@@ -4,7 +4,7 @@ import { Text, Card, Title } from 'react-native-paper';
 import { waterStreakBadges, WaterStreakBadge } from '../constants/waterStreakBadges';
 import { calculateHydrationStreak } from '../utils/calculateStreak';
 // NEW - modular style
-import { db, auth } from '../services/firebase.modular';
+import { db, auth } from '../services/firebase';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 
 type WaterEntry = {

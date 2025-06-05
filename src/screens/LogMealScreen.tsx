@@ -19,7 +19,7 @@ import {
   doc,
 } from 'firebase/firestore';
 // NEW - modular style
-import { db, auth } from '../services/firebase.modular';
+import { db, auth } from '../services/firebase';
 import { format } from 'date-fns';
 import CalendarModal from '../components/CalendarModal';
 

@@ -18,7 +18,7 @@ import {
 } from 'react-native-paper';
 import { useAppContext } from '../context/AppContext';
 // NEW - modular style
-import { db, auth } from '../services/firebase.modular';
+import { db, auth } from '../services/firebase';
 import {
   collection,
   getDocs,

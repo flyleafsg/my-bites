@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 // NEW - modular style
-import { db, auth } from '../services/firebase.modular';
+import { db, auth } from '../services/firebase';
 import { User, onAuthStateChanged, getAuth } from 'firebase/auth';
 import {
   collection,

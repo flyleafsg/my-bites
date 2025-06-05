@@ -14,8 +14,7 @@ import {
   IconButton,
   Title,
 } from 'react-native-paper';
-// NEW - modular style
-import { db, auth } from '../services/firebase.modular';
+import { db, auth } from '../services/firebase';
 import {
   collection,
   getDocs,
@@ -40,7 +39,10 @@ const WaterHistoryScreen = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const fetchWaterEntries = async () => {
-    const q = query(collection(db, 'water'), orderBy('timestamp', 'desc'));
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(collection(db, 'users', user.uid, 'water'), orderBy('timestamp', 'desc'));
     const querySnapshot = await getDocs(q);
     const data: WaterEntry[] = [];
     querySnapshot.forEach((docSnap) => {
@@ -72,7 +74,10 @@ const WaterHistoryScreen = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteDoc(doc(db, 'water', id));
+    const user = auth.currentUser;
+    if (!user) return;
+
+    await deleteDoc(doc(db, 'users', user.uid, 'water', id));
     fetchWaterEntries();
   };
 
@@ -83,14 +88,15 @@ const WaterHistoryScreen = () => {
   };
 
   const handleSaveEdit = async () => {
-    if (selectedEntry && editedAmount > 0) {
-      await updateDoc(doc(db, 'water', selectedEntry.id), {
-        ounces: editedAmount,
-      });
-      setIsModalVisible(false);
-      setSelectedEntry(null);
-      fetchWaterEntries();
-    }
+    const user = auth.currentUser;
+    if (!user || !selectedEntry || editedAmount <= 0) return;
+
+    await updateDoc(doc(db, 'users', user.uid, 'water', selectedEntry.id), {
+      ounces: editedAmount,
+    });
+    setIsModalVisible(false);
+    setSelectedEntry(null);
+    fetchWaterEntries();
   };
 
   const renderEntry = ({ item }: { item: WaterEntry }) => (
@@ -131,7 +137,6 @@ const WaterHistoryScreen = () => {
         contentContainerStyle={styles.list}
       />
 
-      {/* Enhanced Edit Modal with +/- */}
       <Modal visible={isModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -207,48 +212,3 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  modalContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 12,
-    elevation: 5,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  editAdjustContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 12,
-  },
-  smallPillButton: {
-    borderRadius: 50,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 12,
-  },
-  editAmountText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0288D1',
-  },
-  button: {
-    marginTop: 8,
-    width: '100%',
-  },
-});

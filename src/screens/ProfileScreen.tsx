@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, TextInput, Button, Alert } from 'react-native';
-import { auth, db } from '../services/firebase';  // ✅ uses your existing firebase.modular.ts service
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import { auth, db } from '../../services/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const ProfileScreen = () => {
   const user = auth.currentUser;
   const [name, setName] = useState('');
-  const [hydrationTarget, setHydrationTarget] = useState('64'); // default target
+  const [hydrationTarget, setHydrationTarget] = useState('64');
   const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
 
   useEffect(() => {
     if (!user) return;
@@ -18,7 +21,7 @@ const ProfileScreen = () => {
       if (profileSnap.exists()) {
         const data = profileSnap.data();
         setName(data.name || '');
-        setHydrationTarget(data.hydrationTarget?.toString() || '64');
+        setHydrationTarget(data.hydrationTarget || '64');
       }
       setLoading(false);
     };
@@ -26,61 +29,51 @@ const ProfileScreen = () => {
     fetchProfile();
   }, [user]);
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Validation Error', 'Name is required.');
-      return;
+  const saveProfile = async () => {
+    if (!user) return;
+    try {
+      const profileRef = doc(db, 'users', user.uid, 'profile');
+      await setDoc(profileRef, {
+        name,
+        hydrationTarget
+      });
+      await AsyncStorage.setItem('hasOnboarded', 'true');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Home' as never }],
+      });
+    } catch (error) {
+      Alert.alert('Error saving profile');
     }
-
-    const targetValue = parseInt(hydrationTarget);
-    if (isNaN(targetValue) || targetValue < 16 || targetValue > 256) {
-      Alert.alert('Validation Error', 'Hydration target must be between 16 and 256 oz.');
-      return;
-    }
-
-    const profileRef = doc(db, 'users', user.uid, 'profile');
-    await setDoc(profileRef, {
-      name: name.trim(),
-      email: user.email,
-      hydrationTarget: targetValue,
-    });
-
-    Alert.alert('Success', 'Profile updated!');
   };
 
   if (loading) return null;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Email (read-only)</Text>
-      <TextInput style={styles.input} value={user?.email || ''} editable={false} />
-
-      <Text style={styles.label}>Name</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} />
-
-      <Text style={styles.label}>Hydration Target (oz)</Text>
+      <Text style={styles.title}>Set Up Your Profile</Text>
       <TextInput
         style={styles.input}
-        value={hydrationTarget}
-        onChangeText={setHydrationTarget}
-        keyboardType="numeric"
+        placeholder="Your Name"
+        value={name}
+        onChangeText={setName}
       />
-
-      <Button title="Save Profile" onPress={handleSave} />
+      <TextInput
+        style={styles.input}
+        placeholder="Hydration Target (oz)"
+        value={hydrationTarget}
+        keyboardType="numeric"
+        onChangeText={setHydrationTarget}
+      />
+      <Button title="Save & Continue" onPress={saveProfile} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  label: { fontWeight: 'bold', marginTop: 10 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-  },
+  container: { flex: 1, padding: 20, justifyContent: 'center' },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10, marginBottom: 15 },
 });
 
 export default ProfileScreen;
