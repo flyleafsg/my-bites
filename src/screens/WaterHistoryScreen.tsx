@@ -34,142 +34,135 @@ type WaterEntry = {
 
 const WaterHistoryScreen = () => {
   const [waterEntries, setWaterEntries] = useState<WaterEntry[]>([]);
-  const [selectedEntry, setSelectedEntry] = useState<WaterEntry | null>(null);
-  const [editedAmount, setEditedAmount] = useState(0);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<WaterEntry | null>(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
   const fetchWaterEntries = async () => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) {
+      console.log('No user signed in');
+      return;
+    }
 
-    const q = query(collection(db, 'users', user.uid, 'water'), orderBy('timestamp', 'desc'));
-    const querySnapshot = await getDocs(q);
-    const data: WaterEntry[] = [];
-    querySnapshot.forEach((docSnap) => {
-      const entry = docSnap.data() as Omit<WaterEntry, 'id'>;
-      data.push({ id: docSnap.id, ...entry });
-    });
-    setWaterEntries(data);
+    try {
+      const waterRef = collection(db, 'users', user.uid, 'water');
+      const q = query(waterRef, orderBy('timestamp', 'desc'));
+      const snapshot = await getDocs(q);
+      const entries: WaterEntry[] = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ounces: docSnap.data().ounces,
+        timestamp: docSnap.data().timestamp,
+      }));
+      setWaterEntries(entries);
+    } catch (error) {
+      console.error('Error fetching water entries:', error);
+    }
   };
 
   useEffect(() => {
     fetchWaterEntries();
   }, []);
 
-  const confirmDelete = (id: string) => {
-    if (Platform.OS === 'web') {
-      const confirm = window.confirm('Are you sure you want to delete this?');
-      if (confirm) handleDelete(id);
-    } else {
-      Alert.alert(
-        'Delete Entry',
-        'Are you sure you want to delete this?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(id) },
-        ],
-        { cancelable: true }
-      );
+  const handleDelete = async (id: string) => {
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('No user signed in');
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'water', id));
+      fetchWaterEntries();
+    } catch (error) {
+      console.error('Error deleting water entry:', error);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    await deleteDoc(doc(db, 'users', user.uid, 'water', id));
-    fetchWaterEntries();
-  };
-
   const handleEdit = (entry: WaterEntry) => {
-    setSelectedEntry(entry);
-    setEditedAmount(entry.ounces);
-    setIsModalVisible(true);
+    setEditingEntry(entry);
+    setEditModalVisible(true);
   };
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = async (updatedOunces: number) => {
+    if (!editingEntry) return;
+
     const user = auth.currentUser;
-    if (!user || !selectedEntry || editedAmount <= 0) return;
+    if (!user) {
+      console.log('No user signed in');
+      return;
+    }
 
-    await updateDoc(doc(db, 'users', user.uid, 'water', selectedEntry.id), {
-      ounces: editedAmount,
-    });
-    setIsModalVisible(false);
-    setSelectedEntry(null);
-    fetchWaterEntries();
+    try {
+      const entryRef = doc(db, 'users', user.uid, 'water', editingEntry.id);
+      await updateDoc(entryRef, { ounces: updatedOunces });
+      setEditModalVisible(false);
+      setEditingEntry(null);
+      fetchWaterEntries();
+    } catch (error) {
+      console.error('Error updating water entry:', error);
+    }
   };
 
-  const renderEntry = ({ item }: { item: WaterEntry }) => (
+  const renderItem = ({ item }: { item: WaterEntry }) => (
     <Card style={styles.card}>
-      <Card.Title
-        title={`${item.ounces} oz`}
-        titleStyle={styles.cardTitle}
-        subtitle={`Logged: ${item.timestamp.toDate().toLocaleString()}`}
-        subtitleStyle={styles.cardSubtitle}
-        right={() => (
-          <View style={styles.iconContainer}>
-            <IconButton
-              icon="pencil"
-              onPress={() => handleEdit(item)}
-              accessibilityLabel="Edit Entry"
-              iconColor="#FFFFFF"
-            />
-            <IconButton
-              icon="delete"
-              onPress={() => confirmDelete(item.id)}
-              accessibilityLabel="Delete Entry"
-              iconColor="#FFFFFF"
-            />
-          </View>
-        )}
-      />
+      <Card.Content>
+        <Title>{item.ounces} oz</Title>
+        <Text>{item.timestamp.toDate().toLocaleString()}</Text>
+      </Card.Content>
+      <Card.Actions>
+        <IconButton icon="pencil" onPress={() => handleEdit(item)} />
+        <IconButton
+          icon="trash-can"
+          onPress={() =>
+            Alert.alert(
+              'Confirm Delete',
+              'Are you sure you want to delete this entry?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item.id) },
+              ]
+            )
+          }
+        />
+      </Card.Actions>
     </Card>
   );
 
   return (
     <View style={styles.container}>
-      <Title style={styles.header}>Water Intake History</Title>
-
       <FlatList
         data={waterEntries}
         keyExtractor={(item) => item.id}
-        renderItem={renderEntry}
-        contentContainerStyle={styles.list}
+        renderItem={renderItem}
+        contentContainerStyle={styles.listContent}
       />
 
-      <Modal visible={isModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Edit Water Amount</Text>
-
-            <View style={styles.editAdjustContainer}>
-              <Button
-                mode="contained"
-                onPress={() => setEditedAmount((prev) => Math.max(prev - 1, 0))}
-                style={styles.smallPillButton}
-                buttonColor="#4FC3F7"
-                textColor="white"
-              >
-                –
-              </Button>
-              <Text style={styles.editAmountText}>{editedAmount} oz</Text>
-              <Button
-                mode="contained"
-                onPress={() => setEditedAmount((prev) => prev + 8)}
-                style={styles.smallPillButton}
-                buttonColor="#4FC3F7"
-                textColor="white"
-              >
-                +
-              </Button>
-            </View>
-
-            <Button mode="contained" onPress={handleSaveEdit} style={styles.button}>
-              Save
-            </Button>
-            <Button onPress={() => setIsModalVisible(false)} style={styles.button}>
-              Cancel
-            </Button>
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Title>Edit Entry</Title>
+            {editingEntry && (
+              <View>
+                <Button
+                  mode="contained"
+                  onPress={() => handleSaveEdit(editingEntry.ounces + 8)}
+                >
+                  Add 8 oz
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={() => handleSaveEdit(Math.max(0, editingEntry.ounces - 8))}
+                >
+                  Subtract 8 oz
+                </Button>
+              </View>
+            )}
+            <Button onPress={() => setEditModalVisible(false)}>Cancel</Button>
           </View>
         </View>
       </Modal>
@@ -183,32 +176,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
-    backgroundColor: '#F4F9FC',
   },
-  header: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#212121',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  list: {
+  listContent: {
     paddingBottom: 20,
   },
   card: {
-    backgroundColor: '#1E1E1E',
-    marginVertical: 6,
+    marginBottom: 10,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    width: '80%',
     borderRadius: 10,
-    elevation: 3,
   },
-  cardTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cardSubtitle: {
-    color: '#CCCCCC',
-    fontSize: 13,
-  },
-  iconContainer: {
-    flexDirection: 'row',
+});
