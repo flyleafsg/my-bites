@@ -25,12 +25,7 @@ import {
   orderBy,
   query,
 } from 'firebase/firestore';
-
-type WaterEntry = {
-  id: string;
-  ounces: number;
-  timestamp: Timestamp;
-};
+import { WaterEntry } from '../types/types';
 
 const WaterHistoryScreen = () => {
   const [waterEntries, setWaterEntries] = useState<WaterEntry[]>([]);
@@ -50,7 +45,7 @@ const WaterHistoryScreen = () => {
       const snapshot = await getDocs(q);
       const entries: WaterEntry[] = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
-        ounces: docSnap.data().ounces,
+        amount: docSnap.data().amount,
         timestamp: docSnap.data().timestamp,
       }));
       setWaterEntries(entries);
@@ -83,7 +78,7 @@ const WaterHistoryScreen = () => {
     setEditModalVisible(true);
   };
 
-  const handleSaveEdit = async (updatedOunces: number) => {
+  const handleSaveEdit = async (updatedAmount: number) => {
     if (!editingEntry) return;
 
     const user = auth.currentUser;
@@ -94,7 +89,7 @@ const WaterHistoryScreen = () => {
 
     try {
       const entryRef = doc(db, 'users', user.uid, 'water', editingEntry.id);
-      await updateDoc(entryRef, { ounces: updatedOunces });
+      await updateDoc(entryRef, { amount: updatedAmount });
       setEditModalVisible(false);
       setEditingEntry(null);
       fetchWaterEntries();
@@ -106,7 +101,7 @@ const WaterHistoryScreen = () => {
   const renderItem = ({ item }: { item: WaterEntry }) => (
     <Card style={styles.card}>
       <Card.Content>
-        <Title>{item.ounces} oz</Title>
+        <Title>{item.amount} oz</Title>
         <Text>{item.timestamp.toDate().toLocaleString()}</Text>
       </Card.Content>
       <Card.Actions>
@@ -140,7 +135,7 @@ const WaterHistoryScreen = () => {
       <Modal
         visible={editModalVisible}
         animationType="slide"
-        transparent={true}
+        transparent
         onRequestClose={() => setEditModalVisible(false)}
       >
         <View style={styles.modalContainer}>
@@ -150,13 +145,13 @@ const WaterHistoryScreen = () => {
               <View>
                 <Button
                   mode="contained"
-                  onPress={() => handleSaveEdit(editingEntry.ounces + 8)}
+                  onPress={() => handleSaveEdit(editingEntry.amount + 8)}
                 >
                   Add 8 oz
                 </Button>
                 <Button
                   mode="contained"
-                  onPress={() => handleSaveEdit(Math.max(0, editingEntry.ounces - 8))}
+                  onPress={() => handleSaveEdit(Math.max(0, editingEntry.amount - 8))}
                 >
                   Subtract 8 oz
                 </Button>
@@ -173,16 +168,9 @@ const WaterHistoryScreen = () => {
 export default WaterHistoryScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  card: {
-    marginBottom: 10,
-  },
+  container: { flex: 1, padding: 10 },
+  listContent: { paddingBottom: 20 },
+  card: { marginBottom: 10 },
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

@@ -21,14 +21,19 @@ const slides = [
   { key: '3', image: require('../../assets/onboarding3.png') },
 ];
 
+interface Slide {
+  key: string;
+  image: any;
+}
+
 const OnboardingScreen = () => {
   const navigation = useNavigation();
-  const flatListRef = useRef<FlatList>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const flatListRef = useRef<FlatList<Slide>>(null);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
 
   const handleDone = async () => {
-    await AsyncStorage.setItem('hasOnboarded', 'true');
-    navigation.navigate('Home');
+   // await AsyncStorage.setItem('hasOnboarded', 'true');
+    navigation.navigate('Home' as never);
   };
 
   const handleNext = () => {
@@ -46,7 +51,7 @@ const OnboardingScreen = () => {
     handleDone();
   };
 
-  const renderItem = ({ item }: { item: typeof slides[0] }) => (
+  const renderItem = ({ item }: { item: Slide }) => (
     <View style={styles.slide}>
       <Image source={item.image} style={styles.image} />
     </View>
@@ -98,6 +103,8 @@ const OnboardingScreen = () => {
   );
 };
 
+export default OnboardingScreen;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   slide: { width, height, justifyContent: 'center', alignItems: 'center' },
@@ -114,5 +121,3 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, marginHorizontal: 4, backgroundColor: '#bbb' },
   activeDot: { backgroundColor: '#000' },
 });
-
-export default OnboardingScreen;

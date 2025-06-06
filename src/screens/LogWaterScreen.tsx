@@ -17,7 +17,6 @@ import {
   ProgressBar,
 } from 'react-native-paper';
 import { useAppContext } from '../context/AppContext';
-// NEW - modular style
 import { db, auth } from '../services/firebase';
 import {
   collection,
@@ -30,14 +29,8 @@ import {
   query,
 } from 'firebase/firestore';
 import BadgeUnlockModal from '../components/BadgeUnlockModal';
-import HydrationHeroIcon from '../../assets/hydration-hero.png'; // ✅ correct
-
-
-type WaterEntry = {
-  id: string;
-  amount: number;
-  timestamp: Timestamp;
-};
+import HydrationHeroIcon from '../../assets/hydration-hero.png';
+import { WaterEntry } from '../types/types';
 
 const DAILY_GOAL = 64;
 
@@ -71,7 +64,6 @@ const LogWaterScreen = () => {
     setTotalIntake(total);
     animateProgress(total);
 
-    // Badge trigger logic
     if (total >= DAILY_GOAL && !badgeUnlocked) {
       setBadgeUnlocked(true);
       setIsModalVisible(true);
@@ -157,20 +149,14 @@ const LogWaterScreen = () => {
     <View style={styles.container}>
       <Title style={styles.totalText}>Total Water Today: {totalIntake} oz</Title>
 
-      {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <View style={styles.progressWrapper}>
           <Animated.View style={[styles.glow, { opacity: progressAnim }]} />
-          <ProgressBar
-            progress={progressAnim as unknown as number}
-            color="#03A9F4"
-            style={styles.progressBar}
-          />
+          <ProgressBar progress={progressAnim as unknown as number} color="#03A9F4" style={styles.progressBar} />
         </View>
         <Text style={styles.goalText}>Goal: {DAILY_GOAL} oz</Text>
       </View>
 
-      {/* Adjust Water Amount */}
       <View style={styles.adjustContainer}>
         <Button
           mode="contained"
@@ -191,24 +177,12 @@ const LogWaterScreen = () => {
         </Button>
       </View>
 
-      <Button
-        mode="contained"
-        onPress={handleAddWater}
-        style={styles.saveButton}
-        disabled={currentAmount <= 0}
-        buttonColor="#0288D1"
-      >
+      <Button mode="contained" onPress={handleAddWater} style={styles.saveButton} disabled={currentAmount <= 0} buttonColor="#0288D1">
         Save Entry
       </Button>
 
-      <FlatList
-        data={waterEntries}
-        keyExtractor={(item) => item.id}
-        renderItem={renderEntry}
-        contentContainerStyle={styles.list}
-      />
+      <FlatList data={waterEntries} keyExtractor={(item) => item.id} renderItem={renderEntry} contentContainerStyle={styles.list} />
 
-      {/* Badge Unlock Modal */}
       <BadgeUnlockModal
         visible={isModalVisible && badgeUnlocked && totalIntake >= DAILY_GOAL}
         badgeName="Hydration Hero"
@@ -222,90 +196,18 @@ const LogWaterScreen = () => {
 export default LogWaterScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: '#F4F9FC',
-  },
-  totalText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  progressContainer: {
-    marginTop: 8,
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  progressWrapper: {
-    width: '90%',
-    height: 14,
-    borderRadius: 10,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#E0F7FA',
-  },
-  progressBar: {
-    height: 14,
-    backgroundColor: 'transparent',
-  },
-  glow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 14,
-    borderRadius: 10,
-    backgroundColor: '#81D4FA',
-    shadowColor: '#81D4FA',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 6,
-    zIndex: -1,
-  },
-  goalText: {
-    marginTop: 4,
-    fontSize: 12,
-    color: '#555',
-  },
-  adjustContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 12,
-    paddingHorizontal: 20,
-  },
-  pillButton: {
-    borderRadius: 50,
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  amountText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0288D1',
-  },
-  saveButton: {
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 30,
-    height: 50,
-    justifyContent: 'center',
-  },
-  list: {
-    paddingBottom: 20,
-  },
-  card: {
-    marginVertical: 6,
-    borderRadius: 10,
-    elevation: 2,
-  },
-  iconContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  container: { flex: 1, padding: 10, backgroundColor: '#F4F9FC' },
+  totalText: { fontSize: 18, fontWeight: '600', color: '#333', textAlign: 'center', marginTop: 10 },
+  progressContainer: { marginTop: 8, marginBottom: 12, alignItems: 'center' },
+  progressWrapper: { width: '90%', height: 14, borderRadius: 10, overflow: 'hidden', position: 'relative', backgroundColor: '#E0F7FA' },
+  progressBar: { height: 14, backgroundColor: 'transparent' },
+  glow: { position: 'absolute', top: 0, left: 0, right: 0, height: 14, borderRadius: 10, backgroundColor: '#81D4FA', shadowColor: '#81D4FA', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 6, zIndex: -1 },
+  goalText: { marginTop: 4, fontSize: 12, color: '#555' },
+  adjustContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 12, paddingHorizontal: 20 },
+  pillButton: { borderRadius: 50, width: 60, height: 60, justifyContent: 'center', alignItems: 'center' },
+  amountText: { fontSize: 20, fontWeight: 'bold', color: '#0288D1' },
+  saveButton: { marginHorizontal: 20, marginBottom: 16, borderRadius: 30, height: 50, justifyContent: 'center' },
+  list: { paddingBottom: 20 },
+  card: { marginVertical: 6, borderRadius: 10, elevation: 2 },
+  iconContainer: { flexDirection: 'row', alignItems: 'center' },
 });

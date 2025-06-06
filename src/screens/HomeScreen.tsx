@@ -1,17 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Button, Title } from 'react-native-paper';
-// NEW - modular style
 import { db, auth } from '../services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { useNavigation } from '@react-navigation/native';
 import { collection, onSnapshot, query } from 'firebase/firestore';
+import { useNavigation } from '@react-navigation/native';
 import { calculateHydrationStreak } from '../utils/calculateStreak';
-
-type WaterEntry = {
-  amount: number;
-  timestamp: Date;
-};
+import { WaterEntry } from '../types/types';
 
 const HomeScreen = () => {
   const [hydrationStreak, setHydrationStreak] = useState<number>(0);
@@ -21,7 +16,6 @@ const HomeScreen = () => {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        console.log('✅ Firebase user signed in:', firebaseUser.uid);
         setUser(firebaseUser);
 
         const waterRef = collection(db, 'users', firebaseUser.uid, 'water');
@@ -30,21 +24,15 @@ const HomeScreen = () => {
         const unsubscribeWater = onSnapshot(q, (snapshot) => {
           const entries: WaterEntry[] = snapshot.docs.map((doc) => {
             const data = doc.data();
-            console.log('📦 Raw water doc data:', data);
-
             const timestamp = data.timestamp?.toDate?.() ?? new Date(data.timestamp);
             const amount = Number(data.amount ?? data.ounces);
-            console.log('🏠 Water log for streak:', { timestamp, amount });
-
-            return { timestamp, amount };
+            return { id: doc.id, timestamp, amount };
           });
 
           const streak = calculateHydrationStreak(entries);
-          console.log('🏠 Hydration streak (Home):', streak);
           setHydrationStreak(streak);
         });
 
-        // Cleanup Firestore listener
         return () => unsubscribeWater();
       }
     });
@@ -55,56 +43,28 @@ const HomeScreen = () => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Title style={styles.title}>Meal Diary Dashboard</Title>
-      <Text style={styles.subtitle}>Welcome to Meal Diary</Text>
-      {user && (
-        <Text style={styles.email}>Signed in as: {user.email}</Text>
-      )}
+      {user && <Text style={styles.email}>Signed in as: {user.email}</Text>}
       <Text style={styles.streak}>
         Hydration Streak: <Text style={styles.emoji}>💧 {hydrationStreak} Days</Text>
       </Text>
 
-      <Button
-        testID="LogMealButton"
-        mode="contained"
-        style={styles.button}
-        onPress={() => navigation.navigate('LogMeal')}
-      >
+      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('LogMeal' as never)}>
         Log Meal
       </Button>
 
-      <Button
-        testID="LogWaterButton"
-        mode="contained"
-        style={styles.button}
-        onPress={() => navigation.navigate('LogWater')}
-      >
+      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('LogWater' as never)}>
         Log Water
       </Button>
 
-      <Button
-        testID="MealHistoryButton"
-        mode="outlined"
-        style={styles.button}
-        onPress={() => navigation.navigate('MealHistory')}
-      >
+      <Button mode="outlined" style={styles.button} onPress={() => navigation.navigate('MealHistory' as never)}>
         View Meal History
       </Button>
 
-      <Button
-        testID="WaterHistoryButton"
-        mode="outlined"
-        style={styles.button}
-        onPress={() => navigation.navigate('WaterHistory')}
-      >
+      <Button mode="outlined" style={styles.button} onPress={() => navigation.navigate('WaterHistory' as never)}>
         View Water History
       </Button>
 
-      <Button
-        testID="BadgeCollectionButton"
-        mode="contained"
-        style={styles.button}
-        onPress={() => navigation.navigate('BadgeCollection')}
-      >
+      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('BadgeCollection' as never)}>
         View Badges
       </Button>
     </ScrollView>
@@ -125,13 +85,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     color: '#6A1B9A',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#888',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   email: {
     textAlign: 'center',

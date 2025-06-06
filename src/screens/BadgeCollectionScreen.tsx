@@ -3,14 +3,9 @@ import { View, StyleSheet, FlatList } from 'react-native';
 import { Text, Card, Title } from 'react-native-paper';
 import { waterStreakBadges, WaterStreakBadge } from '../constants/waterStreakBadges';
 import { calculateHydrationStreak } from '../utils/calculateStreak';
-// NEW - modular style
 import { db, auth } from '../services/firebase';
 import { collection, onSnapshot, query } from 'firebase/firestore';
-
-type WaterEntry = {
-  timestamp: Date;
-  amount: number;
-};
+import { WaterEntry } from '../types/types';
 
 const BadgeCollectionScreen = () => {
   const [hydrationStreak, setHydrationStreak] = useState<number>(0);
@@ -18,26 +13,18 @@ const BadgeCollectionScreen = () => {
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
       if (user) {
-        console.log('🟢 Authenticated User:', user.uid);
-
         const waterRef = collection(db, 'users', user.uid, 'water');
         const q = query(waterRef);
 
         const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
           const entries: WaterEntry[] = snapshot.docs.map((doc) => {
             const data = doc.data();
-
-            const rawTimestamp = data.timestamp;
-            const timestamp: Date = rawTimestamp?.toDate?.() ?? new Date(rawTimestamp);
-
-            const amount = Number(data.amount ?? data.ounces); // attempt both keys
-            console.log('📦 Water entry:', { timestamp, amount });
-
-            return { timestamp, amount };
+            const timestamp = data.timestamp?.toDate?.() ?? new Date(data.timestamp);
+            const amount = Number(data.amount ?? data.ounces);
+            return { id: doc.id, timestamp, amount };
           });
 
           const streak = calculateHydrationStreak(entries);
-          console.log('🔥 Calculated hydration streak:', streak);
           setHydrationStreak(streak);
         });
 
@@ -83,54 +70,15 @@ const BadgeCollectionScreen = () => {
 export default BadgeCollectionScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
-  },
-  screenTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4A148C',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  list: {
-    paddingBottom: 16,
-  },
-  card: {
-    marginBottom: 12,
-    borderRadius: 12,
-    elevation: 2,
-  },
-  lockedCard: {
-    backgroundColor: '#f0f0f0',
-  },
-  cardContent: {
-    alignItems: 'center',
-  },
-  emoji: {
-    fontSize: 48,
-  },
-  badgeTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4A148C',
-    marginTop: 4,
-  },
-  badgeDescription: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  lockedText: {
-    opacity: 0.4,
-  },
-  lockedLabel: {
-    marginTop: 6,
-    fontSize: 12,
-    color: '#888',
-    fontStyle: 'italic',
-  },
+  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
+  screenTitle: { fontSize: 20, fontWeight: 'bold', color: '#4A148C', marginBottom: 12, textAlign: 'center' },
+  list: { paddingBottom: 16 },
+  card: { marginBottom: 12, borderRadius: 12, elevation: 2 },
+  lockedCard: { backgroundColor: '#f0f0f0' },
+  cardContent: { alignItems: 'center' },
+  emoji: { fontSize: 48 },
+  badgeTitle: { fontSize: 18, fontWeight: 'bold', color: '#4A148C', marginTop: 4 },
+  badgeDescription: { fontSize: 14, color: '#666', textAlign: 'center', marginTop: 4 },
+  lockedText: { opacity: 0.4 },
+  lockedLabel: { marginTop: 6, fontSize: 12, color: '#888', fontStyle: 'italic' },
 });

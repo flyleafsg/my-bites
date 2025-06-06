@@ -1,36 +1,21 @@
 import React, { useState, useContext, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { TextInput, Button, Card, Snackbar, IconButton } from 'react-native-paper';
 import { AppContext } from '../context/AppContext';
-import {
-  Timestamp,
-  collection,
-  addDoc,
-  query,
-  where,
-  onSnapshot,
-  getDocs,
-  deleteDoc,
-  doc,
-} from 'firebase/firestore';
-// NEW - modular style
+import { Timestamp, collection, addDoc, query, where, onSnapshot, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import { format } from 'date-fns';
 import CalendarModal from '../components/CalendarModal';
+import { MealEntry, FavoriteEntry } from '../types/types';
 
 export default function LogMealScreen() {
   const { user } = useContext(AppContext)!;
   const [mealName, setMealName] = useState('');
   const [mealType, setMealType] = useState('Breakfast');
-  const [mealLog, setMealLog] = useState<any[]>([]);
+  const [mealLog, setMealLog] = useState<MealEntry[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
-  const [favorites, setFavorites] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
@@ -49,9 +34,11 @@ export default function LogMealScreen() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const meals = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const meals: MealEntry[] = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        name: docSnap.data().name,
+        type: docSnap.data().type,
+        timestamp: docSnap.data().timestamp,
       }));
       setMealLog(meals);
     });
@@ -63,47 +50,38 @@ export default function LogMealScreen() {
     if (!user) return;
     const favRef = collection(db, 'users', user.uid, 'favorites');
     const snapshot = await getDocs(favRef);
-    const favs = snapshot.docs.map((doc) => ({
+    const favs: FavoriteEntry[] = snapshot.docs.map((doc) => ({
       id: doc.id,
-      ...doc.data(),
+      name: doc.data().name,
+      type: doc.data().type,
+      timestamp: doc.data().timestamp,
     }));
     setFavorites(favs);
   };
 
-  const isFavorite = (meal: any) => {
-    return favorites.some(
-      (fav) => fav.name === meal.name && fav.type === meal.type
-    );
+  const isFavorite = (meal: MealEntry) => {
+    return favorites.some((fav) => fav.name === meal.name && fav.type === meal.type);
   };
 
-  const handleToggleFavorite = async (meal: any) => {
+  const handleToggleFavorite = async (meal: MealEntry) => {
     if (!user) return;
-    try {
-      const favRef = collection(db, 'users', user.uid, 'favorites');
-      const snapshot = await getDocs(
-        query(favRef, where('name', '==', meal.name), where('type', '==', meal.type))
-      );
-      if (!snapshot.empty) {
-        const docToRemove = snapshot.docs.find(
-          (docSnap) => docSnap.data().name === meal.name && docSnap.data().type === meal.type
-        );
-        if (docToRemove) {
-          await deleteDoc(doc(db, 'users', user.uid, 'favorites', docToRemove.id));
-          setSnackbarMessage(`Removed from favorites: ${meal.name}`);
-        }
-      } else {
-        await addDoc(favRef, {
-          name: meal.name,
-          type: meal.type,
-          timestamp: meal.timestamp || Timestamp.now(),
-        });
-        setSnackbarMessage(`Added to favorites: ${meal.name}`);
-      }
-      setSnackbarVisible(true);
-      fetchFavorites();
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
+    const favRef = collection(db, 'users', user.uid, 'favorites');
+    const snapshot = await getDocs(query(favRef, where('name', '==', meal.name), where('type', '==', meal.type)));
+
+    if (!snapshot.empty) {
+      const docToRemove = snapshot.docs[0];
+      await deleteDoc(doc(db, 'users', user.uid, 'favorites', docToRemove.id));
+      setSnackbarMessage(`Removed from favorites: ${meal.name}`);
+    } else {
+      await addDoc(favRef, {
+        name: meal.name,
+        type: meal.type,
+        timestamp: meal.timestamp || Timestamp.now(),
+      });
+      setSnackbarMessage(`Added to favorites: ${meal.name}`);
     }
+    setSnackbarVisible(true);
+    fetchFavorites();
   };
 
   useEffect(() => {
@@ -185,12 +163,7 @@ export default function LogMealScreen() {
           >
             <View style={styles.mealRow}>
               <Text style={styles.favoriteText}>{item.type}: {item.name}</Text>
-              <IconButton
-                icon="star"
-                size={16}
-                onPress={() => handleToggleFavorite(item)}
-                iconColor="#FFD700"
-              />
+              <IconButton icon="star" size={16} onPress={() => handleToggleFavorite(item)} iconColor="#FFD700" />
             </View>
           </TouchableOpacity>
         ))}
@@ -205,21 +178,12 @@ export default function LogMealScreen() {
           <Card key={item.id} style={styles.card}>
             <Card.Content style={{ backgroundColor: '#f9f9f9', borderRadius: 8 }}>
               <View style={styles.mealRow}>
-                <Text style={[styles.mealText, { color: '#000' }]}> 
+                <Text style={[styles.mealText, { color: '#000' }]}>
                   {item.type}: {item.name}
                 </Text>
-                <IconButton
-                  icon={favorited ? 'star' : 'star-outline'}
-                  size={20}
-                  onPress={() => handleToggleFavorite(item)}
-                  iconColor={favorited ? '#FFD700' : '#888'}
-                />
+                <IconButton icon={favorited ? 'star' : 'star-outline'} size={20} onPress={() => handleToggleFavorite(item)} iconColor={favorited ? '#FFD700' : '#888'} />
               </View>
-              {mealTime && (
-                <Text style={[styles.timestampText, { color: '#333' }]}> 
-                  {format(mealTime, 'hh:mm a')}
-                </Text>
-              )}
+              {mealTime && <Text style={[styles.timestampText, { color: '#333' }]}>{format(mealTime, 'hh:mm a')}</Text>}
             </Card.Content>
           </Card>
         );
@@ -232,12 +196,7 @@ export default function LogMealScreen() {
         selectedDate={selectedDate}
       />
 
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={3000}
-        style={{ backgroundColor: '#4caf50' }}
-      >
+      <Snackbar visible={snackbarVisible} onDismiss={() => setSnackbarVisible(false)} duration={3000} style={{ backgroundColor: '#4caf50' }}>
         {snackbarMessage}
       </Snackbar>
     </View>
@@ -245,84 +204,20 @@ export default function LogMealScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  heading: {
-    fontSize: 24,
-    marginBottom: 8,
-    fontWeight: 'bold',
-  },
-  subheading: {
-    fontSize: 18,
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  dateText: {
-    fontSize: 16,
-    marginBottom: 8,
-    color: '#007aff',
-    textAlign: 'center',
-  },
-  input: {
-    marginBottom: 8,
-    fontSize: 14,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
-    justifyContent: 'space-between',
-  },
-  mealTypeButton: {
-    margin: 4,
-    flexGrow: 1,
-  },
-  saveButton: {
-    marginBottom: 12,
-  },
-  favoritesWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 8,
-  },
-  favoriteCard: {
-    backgroundColor: '#e0f7fa',
-    padding: 10,
-    borderRadius: 8,
-    minWidth: 160,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  favoriteText: {
-    fontSize: 14,
-    color: '#333',
-    flexShrink: 1,
-  },
-  mealList: {
-    paddingBottom: 100,
-  },
-  card: {
-    marginVertical: 6,
-    padding: 0,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-  },
-  mealRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  mealText: {
-    fontSize: 16,
-    flexShrink: 1,
-  },
-  timestampText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
+  container: { flex: 1, padding: 16 },
+  heading: { fontSize: 24, marginBottom: 8, fontWeight: 'bold' },
+  subheading: { fontSize: 18, marginTop: 20, marginBottom: 8 },
+  dateText: { fontSize: 16, marginBottom: 8, color: '#007aff', textAlign: 'center' },
+  input: { marginBottom: 8, fontSize: 14 },
+  buttonRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12, justifyContent: 'space-between' },
+  mealTypeButton: { margin: 4, flexGrow: 1 },
+  saveButton: { marginBottom: 12 },
+  favoritesWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
+  favoriteCard: { backgroundColor: '#e0f7fa', padding: 10, borderRadius: 8, minWidth: 160, marginRight: 8, marginBottom: 8 },
+  favoriteText: { fontSize: 14, color: '#333', flexShrink: 1 },
+  mealRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  mealText: { fontSize: 16, flexShrink: 1 },
+  timestampText: { fontSize: 12, color: '#666', marginTop: 4 },
+  card: { marginVertical: 6, padding: 0, borderRadius: 10, overflow: 'hidden', backgroundColor: '#fff' },
 });
+

@@ -26,6 +26,8 @@ const WelcomeScreen = () => {
   );
 };
 
+export default WelcomeScreen;
+
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   title: { fontSize: 28, fontWeight: 'bold', marginBottom: 20 },
@@ -33,5 +35,3 @@ const styles = StyleSheet.create({
   buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '80%' },
   nextButton: { marginLeft: 10 },
 });
-
-export default WelcomeScreen;
