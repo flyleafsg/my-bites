@@ -1,104 +1,77 @@
-import React, { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  Dimensions,
-  FlatList,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, TextInput, Alert } from 'react-native';
+import { Text, Button, Title } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth, db } from '../services/firebase';  // ✅ assumes you're using your modular firebase service
+import { doc, setDoc } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
-
-const { width, height } = Dimensions.get('window');
-
-const slides = [
-  { key: '1', image: require('../../assets/onboarding1.png') },
-  { key: '2', image: require('../../assets/onboarding2.png') },
-  { key: '3', image: require('../../assets/onboarding3.png') },
-];
-
-interface Slide {
-  key: string;
-  image: any;
-}
 
 const OnboardingScreen = () => {
   const navigation = useNavigation();
-  const flatListRef = useRef<FlatList<Slide>>(null);
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const user = auth.currentUser;
 
-  const handleDone = async () => {
-   // await AsyncStorage.setItem('hasOnboarded', 'true');
-    navigation.navigate('Home' as never);
-  };
+  const [name, setName] = useState('');
+  const [hydrationTarget, setHydrationTarget] = useState('64');
+  const [loading, setLoading] = useState(false);
 
-  const handleNext = () => {
-    if (currentIndex < slides.length - 1) {
-      flatListRef.current?.scrollToOffset({
-        offset: width * (currentIndex + 1),
-        animated: true,
-      });
-    } else {
-      handleDone();
+  const handleOnboardingComplete = async () => {
+    if (!user) {
+      Alert.alert('User not authenticated.');
+      return;
     }
-  };
 
-  const handleSkip = () => {
-    handleDone();
-  };
+    if (name.trim() === '' || hydrationTarget.trim() === '') {
+      Alert.alert('Please complete all fields.');
+      return;
+    }
 
-  const renderItem = ({ item }: { item: Slide }) => (
-    <View style={styles.slide}>
-      <Image source={item.image} style={styles.image} />
-    </View>
-  );
+    try {
+      setLoading(true);
 
-  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = Math.round(event.nativeEvent.contentOffset.x / width);
-    setCurrentIndex(index);
+      const profileRef = doc(db, 'users', user.uid, 'profile');
+      await setDoc(profileRef, {
+        name: name.trim(),
+        hydrationTarget: parseInt(hydrationTarget),
+        createdAt: new Date(),
+      });
+
+      await AsyncStorage.setItem('hasOnboarded', 'true');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      });
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      Alert.alert('Failed to save profile.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <FlatList
-        ref={flatListRef}
-        data={slides}
-        renderItem={renderItem}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.key}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
+      <Title style={styles.title}>Welcome to My Bites!</Title>
+      <TextInput
+        placeholder="Enter your name"
+        value={name}
+        onChangeText={setName}
+        style={styles.input}
       />
-
-      <View style={styles.footer}>
-        <TouchableOpacity onPress={handleSkip}>
-          <Text style={styles.footerText}>Skip</Text>
-        </TouchableOpacity>
-
-        <View style={styles.dotsContainer}>
-          {slides.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                currentIndex === index ? styles.activeDot : {},
-              ]}
-            />
-          ))}
-        </View>
-
-        <TouchableOpacity onPress={handleNext}>
-          <Text style={styles.footerText}>
-            {currentIndex === slides.length - 1 ? 'Done' : 'Next'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <TextInput
+        placeholder="Daily hydration target (oz)"
+        value={hydrationTarget}
+        onChangeText={setHydrationTarget}
+        keyboardType="numeric"
+        style={styles.input}
+      />
+      <Button
+        mode="contained"
+        onPress={handleOnboardingComplete}
+        loading={loading}
+        style={styles.button}
+      >
+        Complete Setup
+      </Button>
     </View>
   );
 };
@@ -106,18 +79,25 @@ const OnboardingScreen = () => {
 export default OnboardingScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  slide: { width, height, justifyContent: 'center', alignItems: 'center' },
-  image: { width: 300, height: 300, resizeMode: 'contain' },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-    paddingBottom: 30,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: 'white',
   },
-  footerText: { fontSize: 16, color: '#000' },
-  dotsContainer: { flexDirection: 'row', alignItems: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4, marginHorizontal: 4, backgroundColor: '#bbb' },
-  activeDot: { backgroundColor: '#000' },
+  title: {
+    marginBottom: 24,
+    fontSize: 24,
+    textAlign: 'center',
+  },
+  input: {
+    marginBottom: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+  },
+  button: {
+    marginTop: 16,
+  },
 });

@@ -48,23 +48,23 @@ const HomeScreen = () => {
         Hydration Streak: <Text style={styles.emoji}>💧 {hydrationStreak} Days</Text>
       </Text>
 
-      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('LogMeal' as never)}>
+      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('LogMealScreen' as never)}>
         Log Meal
       </Button>
 
-      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('LogWater' as never)}>
+      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('LogWaterScreen' as never)}>
         Log Water
       </Button>
 
-      <Button mode="outlined" style={styles.button} onPress={() => navigation.navigate('MealHistory' as never)}>
+      <Button mode="outlined" style={styles.button} onPress={() => navigation.navigate('MealHistoryScreen' as never)}>
         View Meal History
       </Button>
 
-      <Button mode="outlined" style={styles.button} onPress={() => navigation.navigate('WaterHistory' as never)}>
+      <Button mode="outlined" style={styles.button} onPress={() => navigation.navigate('WaterHistoryScreen' as never)}>
         View Water History
       </Button>
 
-      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('BadgeCollection' as never)}>
+      <Button mode="contained" style={styles.button} onPress={() => navigation.navigate('BadgeCollectionScreen' as never)}>
         View Badges
       </Button>
     </ScrollView>

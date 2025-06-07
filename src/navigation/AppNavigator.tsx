@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 
+// Import your screens
 import HomeScreen from '../screens/HomeScreen';
 import LogMealScreen from '../screens/LogMealScreen';
 import MealHistoryScreen from '../screens/MealHistoryScreen';
@@ -11,7 +12,6 @@ import WaterHistoryScreen from '../screens/WaterHistoryScreen';
 import BadgeCollectionScreen from '../screens/BadgeCollectionScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import WelcomeScreen from '../screens/WelcomeScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -21,37 +21,41 @@ const AppNavigator = () => {
 
   useEffect(() => {
     const checkOnboarding = async () => {
-      const onboardFlag = await AsyncStorage.getItem('hasOnboarded');
-      setHasOnboarded(onboardFlag === 'true');
-      setIsLoading(false);
+      try {
+        const onboardFlag = await AsyncStorage.getItem('hasOnboarded');
+        setHasOnboarded(onboardFlag === 'true');
+      } catch (error) {
+        console.error('Error reading onboarding status:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     checkOnboarding();
   }, []);
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return null; // Optional: you can replace this with a loading spinner later
+  }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: true,  // ✅ shows back arrows automatically!
-        }}
-      >
+      <Stack.Navigator screenOptions={{ headerShown: true }}>
         {!hasOnboarded ? (
-          <>
-            <Stack.Screen name="Welcome" component={WelcomeScreen} />
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-          </>
+          <Stack.Screen
+            name="OnboardingScreen"
+            component={OnboardingScreen}
+            options={{ headerShown: false }}
+          />
         ) : (
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="LogMeal" component={LogMealScreen} />
-            <Stack.Screen name="MealHistory" component={MealHistoryScreen} />
-            <Stack.Screen name="LogWater" component={LogWaterScreen} />
-            <Stack.Screen name="WaterHistory" component={WaterHistoryScreen} />
-            <Stack.Screen name="BadgeCollection" component={BadgeCollectionScreen} />
+            <Stack.Screen name="LogMealScreen" component={LogMealScreen} />
+            <Stack.Screen name="MealHistoryScreen" component={MealHistoryScreen} />
+            <Stack.Screen name="LogWaterScreen" component={LogWaterScreen} />
+            <Stack.Screen name="WaterHistoryScreen" component={WaterHistoryScreen} />
+            <Stack.Screen name="BadgeCollectionScreen" component={BadgeCollectionScreen} />
+            <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
           </>
         )}
       </Stack.Navigator>
