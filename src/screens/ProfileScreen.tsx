@@ -1,72 +1,99 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, TextInput, Button, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { View, StyleSheet, TextInput, Alert } from 'react-native';
+import { Text, Button, Title } from 'react-native-paper';
 import { auth, db } from '../services/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { ProfileData } from '../types/types';
+import { useNavigation } from '@react-navigation/native';
 
 const ProfileScreen = () => {
   const user = auth.currentUser;
-  const [name, setName] = useState<string>('');
-  const [hydrationTarget, setHydrationTarget] = useState<string>('64');
-  const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
+
+  const [name, setName] = useState('');
+  const [hydrationTarget, setHydrationTarget] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
     const fetchProfile = async () => {
-      const profileRef = doc(db, 'users', user.uid, 'profile');
-      const profileSnap = await getDoc(profileRef);
-      if (profileSnap.exists()) {
-        const data = profileSnap.data() as ProfileData;
-        setName(data.name || '');
-        setHydrationTarget(data.hydrationTarget || '64');
+      try {
+        const profileRef = doc(db, 'profiles', user.uid);  // 🔧 MOVED TO /profiles/{uid}
+        const profileSnap = await getDoc(profileRef);
+        if (profileSnap.exists()) {
+          const profileData = profileSnap.data();
+          setName(profileData.name || '');
+          setHydrationTarget(profileData.hydrationTarget?.toString() || '');
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        Alert.alert('Failed to load profile');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchProfile();
   }, [user]);
 
-  const saveProfile = async () => {
-    if (!user) return;
+  const handleSave = async () => {
+    if (!user) {
+      Alert.alert('User not authenticated');
+      return;
+    }
+
+    if (name.trim() === '' || hydrationTarget.trim() === '') {
+      Alert.alert('Please complete all fields');
+      return;
+    }
+
     try {
-      const profileRef = doc(db, 'users', user.uid, 'profile');
+      setSaving(true);
+      const profileRef = doc(db, 'profiles', user.uid);
       await setDoc(profileRef, {
-        name,
-        hydrationTarget,
+        name: name.trim(),
+        hydrationTarget: parseInt(hydrationTarget),
+        updatedAt: new Date(),
       });
-      await AsyncStorage.setItem('hasOnboarded', 'true');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' as never }],
-      });
+
+      Alert.alert('Profile updated successfully');
+      navigation.goBack();
     } catch (error) {
-      Alert.alert('Error saving profile');
+      console.error('Error saving profile:', error);
+      Alert.alert('Failed to save profile');
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading profile...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Set Up Your Profile</Text>
+      <Title style={styles.title}>Edit Profile</Title>
       <TextInput
-        style={styles.input}
-        placeholder="Your Name"
+        placeholder="Your name"
         value={name}
         onChangeText={setName}
+        style={styles.input}
       />
       <TextInput
-        style={styles.input}
-        placeholder="Hydration Target (oz)"
+        placeholder="Hydration target (oz)"
         value={hydrationTarget}
-        keyboardType="numeric"
         onChangeText={setHydrationTarget}
+        keyboardType="numeric"
+        style={styles.input}
       />
-      <Button title="Save & Continue" onPress={saveProfile} />
+      <Button mode="contained" onPress={handleSave} loading={saving} style={styles.button}>
+        Save Profile
+      </Button>
     </View>
   );
 };
@@ -74,7 +101,25 @@ const ProfileScreen = () => {
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10, marginBottom: 15 },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: 'white',
+  },
+  title: {
+    marginBottom: 24,
+    fontSize: 24,
+    textAlign: 'center',
+  },
+  input: {
+    marginBottom: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+  },
+  button: {
+    marginTop: 16,
+  },
 });

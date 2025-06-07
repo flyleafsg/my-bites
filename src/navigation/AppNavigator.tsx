@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
+import { useAppContext } from '../context/AppContext';
 
-// Import your screens
+// Import screens
 import HomeScreen from '../screens/HomeScreen';
 import LogMealScreen from '../screens/LogMealScreen';
 import MealHistoryScreen from '../screens/MealHistoryScreen';
@@ -16,27 +16,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasOnboarded, setHasOnboarded] = useState(false);
-
-  useEffect(() => {
-    const checkOnboarding = async () => {
-      try {
-        const onboardFlag = await AsyncStorage.getItem('hasOnboarded');
-        setHasOnboarded(onboardFlag === 'true');
-      } catch (error) {
-        console.error('Error reading onboarding status:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkOnboarding();
-  }, []);
-
-  if (isLoading) {
-    return null; // Optional: you can replace this with a loading spinner later
-  }
+  const { hasOnboarded } = useAppContext();
 
   return (
     <NavigationContainer>
